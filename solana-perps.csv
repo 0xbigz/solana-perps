@@ -1,0 +1,4 @@
+protocol,,implementation,maker fee,taker fee,website
+Mango,,CLOB,-0.04,0.05,https://trade.mango.markets/market?name=SOL-PERP
+Drift,,vAMM,nan,0.1,https://alpha.drift.trade/SOL
+Bonfida,,vAMM,nan,0.2,https://perps.bonfida.org/#/
