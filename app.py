@@ -69,8 +69,8 @@ app.layout = html.Div(
                         html.Img(
                             src="https://pbs.twimg.com/profile_banners/1388194344390119426/1637877290/1500x500",
                             style={
-                                "height": "4%",
-                                "width": "4%",
+                                "height": "50px",
+                                # "width": "4%",
                                 "float": "left",
                                 "position": "relative",
                                 "padding-top": 0,
