@@ -48,7 +48,7 @@ def get_drift_prices():
 
 
 mango_v_drift = pd.DataFrame(
-    columns=["Platform", "SOL", "BTC", "ETH"], index=["Drift", "Mango"]
+    columns=["Protocol", "SOL", "BTC", "ETH"], index=["Drift", "Mango"]
 )
 
 # image_filename = os.getcwd() + "/logo_drift.png"  # replace with your own image
@@ -132,7 +132,7 @@ app.layout = html.Div(
         html.H5("FAQ"),
         html.H3("Why are prices different?"),
         html.P(
-            "perpetual swaps aren't fungible. you cant take a position on one platform and bring it to another. so the acessibility (drift on closed mainnet) + incentive structures(drift hourly funding rates vs mango continuous) + exchange risk (drift vAMM vs mango clob) will bring prices in line."
+            "perpetual swaps aren't fungible. you cant take a position on one protocol and bring it to another. so the acessibility (drift on closed mainnet) + incentive structures(drift hourly funding rates vs mango continuous) + exchange risk (drift vAMM vs mango clob) will bring prices in line."
         ),
         html.P(
             "prices are currently `last trade`, mango's bid/ask price could be different."
@@ -353,7 +353,7 @@ def update_metrics(n, selected_value):
         index=["Drift", "Mango"],
     )
 
-    mango_v_drift.index.name = "Platform"
+    mango_v_drift.index.name = "Protocol"
     mango_v_drift = mango_v_drift.reset_index()
     # print(mango_v_drift)
 
