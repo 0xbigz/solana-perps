@@ -62,9 +62,29 @@ drift_prices = get_drift_prices()
 
 app.layout = html.Div(
     [
-        html.H2("Platyperps"),
+        html.A(
+            [
+                html.Span(
+                    [
+                        html.Img(
+                            src="https://pbs.twimg.com/profile_banners/1388194344390119426/1637877290/1500x500",
+                            style={
+                                "height": "4%",
+                                "width": "4%",
+                                "float": "left",
+                                "position": "relative",
+                                "padding-top": 0,
+                                "padding-right": 10,
+                            },
+                        ),
+                    ]
+                )
+            ],
+            href="https://twitter.com/bigz_Pubkey",
+        ),
+        html.H2("platyperps"),
         html.H4("~comparing perputual swap prices on Solana DEXs~"),
-        html.H4("(updates every 5 seconds)"),
+        html.H4("(updates every 5 seconds, please be patient with loads! 🐢 )"),
         dcc.Loading(
             id="loading-1", type="default", children=html.Div(id="loading-output-1")
         ),
@@ -114,8 +134,37 @@ app.layout = html.Div(
         html.P(
             "perpetual swaps aren't fungible. you cant take a position on one platform and bring it to another. so the acessibility (drift on closed mainnet) + incentive structures(drift hourly funding rates vs mango continuous) + exchange risk (drift vAMM vs mango clob) will bring prices in line."
         ),
-        html.H3("When funding comparison/strategy explaination?"),
+        html.P(
+            "prices are currently `last trade`, mango's bid/ask price could be different."
+        ),
+        html.H3("When funding comparison/strategy explanation?"),
         html.P("soon (tm)"),
+        html.Br(),
+        html.Br(),
+        html.Br(),
+        html.H5("Resources"),
+        html.H4("readings"),
+        html.A(
+            "Drift litepaper (wip)",
+            href="https://foregoing-script-fd0.notion.site/Drift-s-dAMM-ff154003aedb4efa83d6e7f4440cd4ab",
+        ),
+        html.Br(),
+        html.A(
+            "Mango litepaper",
+            href="https://docs.mango.markets/litepaper",
+        ),
+        html.H4("sdk:"),
+        html.A(
+            "mango-explorer (python) ",
+            href="https://github.com/blockworks-foundation/mango-explorer",
+        ),
+        html.Br(),
+        html.A("drift-py (python)", href="https://github.com/drift-labs/drift-py"),
+        html.H4("open source bots:"),
+        html.A(
+            "drifting-mango (chenwainuo)",
+            href="https://github.com/chenwainuo/drifting-mango",
+        )
         # html.Img(src=app.get_asset_url("logo_mango.svg")),
         # html.Img(src="data:image/png;base64,{}".format(encoded_image))
         # dash_table.DataTable(
@@ -246,8 +295,18 @@ def update_metrics(n, selected_value):
 
         if val in selected_value:
             rr = [
-                html.Div('You have selected "{}"'.format(selected_value)),
+                html.Div("prices for {}:".format(selected_value)),
                 html.Br(),
+                html.Img(
+                    src="static/logo_drift.png",
+                    style={
+                        "height": "45px",
+                        # "width": "2%",
+                        "float": "left",
+                        "position": "relative",
+                        "padding-right": 10,
+                    },
+                ),
                 html.Code(
                     "Drift Price: {0:.2f}".format(drift_price_latest), style=style
                 ),
@@ -260,6 +319,17 @@ def update_metrics(n, selected_value):
                 ),
                 html.Br(),
                 html.Br(),
+                html.Img(
+                    src="static/logo_mango.png",
+                    style={
+                        "height": "45px",
+                        # "width": "22%",
+                        "float": "left",
+                        "position": "relative",
+                        "padding-top": 0,
+                        "padding-right": 10,
+                    },
+                ),
                 html.Code(
                     "Mango Price: {0:.2f}".format(mango_price_latest["price"]),
                     style=style,
