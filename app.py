@@ -51,8 +51,8 @@ mango_v_drift = pd.DataFrame(
     columns=["Platform", "SOL", "BTC", "ETH"], index=["Drift", "Mango"]
 )
 
-image_filename = os.getcwd() + "/logo_drift.png"  # replace with your own image
-encoded_image = base64.b64encode(open(image_filename, "rb").read())
+# image_filename = os.getcwd() + "/logo_drift.png"  # replace with your own image
+# encoded_image = base64.b64encode(open(image_filename, "rb").read())
 
 
 app = dash.Dash(__name__)
@@ -64,9 +64,13 @@ app.layout = html.Div(
     [
         html.H2("Platyperps"),
         html.H4("~comparing perputual swap prices on Solana DEXs~"),
+        html.H4("(updates every 5 seconds)"),
+        dcc.Loading(
+            id="loading-1", type="default", children=html.Div(id="loading-output-1")
+        ),
         dcc.Interval(
             id="interval-component",
-            interval=1 * 2000,
+            interval=1 * 5000,
             n_intervals=0,  # in milliseconds
         ),
         html.H5("Overview"),
@@ -112,8 +116,8 @@ app.layout = html.Div(
         ),
         html.H3("When funding comparison/strategy explaination?"),
         html.P("soon (tm)"),
-        html.Img(src=app.get_asset_url("logo_mango.svg")),
-        html.Img(src="data:image/png;base64,{}".format(encoded_image))
+        # html.Img(src=app.get_asset_url("logo_mango.svg")),
+        # html.Img(src="data:image/png;base64,{}".format(encoded_image))
         # dash_table.DataTable(
         #     id="live_table",
         #     columns=[
@@ -245,6 +249,18 @@ def update_metrics(n, selected_value):
                 html.Div('You have selected "{}"'.format(selected_value)),
                 html.Br(),
                 html.Code(
+                    "Drift Price: {0:.2f}".format(drift_price_latest), style=style
+                ),
+                html.Br(),
+                html.Code(
+                    "last trade: delta={0:.4f}, time=".format(drift_price_change)
+                    + drift_last_trade
+                    + "",
+                    # style=style,
+                ),
+                html.Br(),
+                html.Br(),
+                html.Code(
                     "Mango Price: {0:.2f}".format(mango_price_latest["price"]),
                     style=style,
                 ),
@@ -252,18 +268,6 @@ def update_metrics(n, selected_value):
                 html.Code(
                     "last trade: delta={0:.4f}, time=".format(mango_price_change)
                     + mango_last_trade
-                    + "",
-                    # style=style,
-                ),
-                html.Br(),
-                html.Br(),
-                html.Code(
-                    "Drift Price: {0:.2f}".format(drift_price_latest), style=style
-                ),
-                html.Br(),
-                html.Code(
-                    "last trade: delta={0:.4f}, time=".format(drift_price_change)
-                    + drift_last_trade
                     + "",
                     # style=style,
                 ),
