@@ -5,6 +5,8 @@ import dash_core_components as dcc
 import dash_html_components as html
 import pandas as pd
 
+from ui import header
+
 import requests
 import datetime
 import base64
@@ -67,8 +69,10 @@ def get_drift_prices():
 
 
 mango_v_drift = pd.DataFrame(
-    columns=["Protocol", "SOL", "BTC", "ETH"], index=["Drift", "Mango"]
+    [["loading..."] * 4] * 4,
+    columns=["Protocol", "SOL", "BTC", "ETH"],
 )
+mango_v_drift["Protocol"] = pd.Series(["Drift", "Mango", "Bonfida", "(CoinGecko)"])
 
 # image_filename = os.getcwd() + "/logo_drift.png"  # replace with your own image
 # encoded_image = base64.b64encode(open(image_filename, "rb").read())
@@ -81,29 +85,7 @@ drift_prices = get_drift_prices()
 
 app.layout = html.Div(
     [
-        html.A(
-            [
-                html.Span(
-                    [
-                        html.Img(
-                            src="https://pbs.twimg.com/profile_banners/1388194344390119426/1637877290/1500x500",
-                            style={
-                                "height": "50px",
-                                # "width": "4%",
-                                "float": "left",
-                                "position": "relative",
-                                "padding-top": 0,
-                                "padding-right": 10,
-                            },
-                        ),
-                    ]
-                )
-            ],
-            href="https://twitter.com/bigz_Pubkey",
-        ),
-        html.H2("platyperps"),
-        html.H4("~comparing perpetual swap prices on Solana DEXs~"),
-        html.H4("(updates every 10 seconds, please be patient with loads! 🐢 )"),
+        header.make_header(),
         dcc.Loading(
             id="loading-1", type="default", children=html.Div(id="loading-output-1")
         ),
@@ -119,6 +101,7 @@ app.layout = html.Div(
                 {"name": i, "id": i, "deletable": False, "selectable": True}
                 for i in mango_v_drift.columns
             ],
+            style_data={"whiteSpace": "normal", "height": "auto", "lineHeight": "15px"},
             data=mango_v_drift.to_dict("records"),
             # editable=True,
             # filter_action="native",
@@ -144,7 +127,7 @@ app.layout = html.Div(
             ],
             value="SOL-PERP",
         ),
-        html.Div(id="live-update-text"),
+        html.Div("loading...", id="live-update-text"),
         html.Br(),
         html.Br(),
         html.Br(),
