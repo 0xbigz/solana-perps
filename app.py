@@ -102,7 +102,7 @@ app.layout = html.Div(
             href="https://twitter.com/bigz_Pubkey",
         ),
         html.H2("platyperps"),
-        html.H4("~comparing perputual swap prices on Solana DEXs~"),
+        html.H4("~comparing perpetual swap prices on Solana DEXs~"),
         html.H4("(updates every 10 seconds, please be patient with loads! 🐢 )"),
         dcc.Loading(
             id="loading-1", type="default", children=html.Div(id="loading-output-1")
@@ -151,7 +151,7 @@ app.layout = html.Div(
         html.H5("FAQ"),
         html.H3("Why are prices different?"),
         html.P(
-            "perpetual swaps aren't fungible. you cant take a position on one protocol and bring it to another. so the acessibility (drift on closed mainnet) + incentive structures(drift hourly funding rates vs mango continuous) + exchange risk (drift vAMM vs mango clob) will bring prices in line."
+            "perpetual swaps aren't fungible. you cant take a position on one protocol and bring it to another. so the accessibility (drift on closed mainnet) + incentive structures(drift hourly funding rates vs mango continuous) + exchange risk (drift vAMM vs mango clob) will bring prices in line."
         ),
         html.P(
             "prices are currently `last trade`, mango's bid/ask price could be different."
@@ -164,14 +164,20 @@ app.layout = html.Div(
         html.H5("Resources"),
         html.H4("readings"),
         html.A(
-            "Drift litepaper (wip)",
-            href="https://foregoing-script-fd0.notion.site/Drift-s-dAMM-ff154003aedb4efa83d6e7f4440cd4ab",
+            "Drift litepaper",
+            href="https://docs.drift.trade/technical-litepaper",
         ),
         html.Br(),
         html.A(
             "Mango litepaper",
             href="https://docs.mango.markets/litepaper",
         ),
+        html.Br(),
+        html.A(
+            "deep dive Drift explainer (wip)",
+            href="https://foregoing-script-fd0.notion.site/Drift-s-dAMM-ff154003aedb4efa83d6e7f4440cd4ab",
+        ),
+        html.Br(),
         html.H4("sdk:"),
         html.A(
             "mango-explorer (python) ",
