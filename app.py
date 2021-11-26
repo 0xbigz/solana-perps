@@ -17,6 +17,12 @@ df = pd.read_csv(
 fees = pd.read_excel("sol-spl-fees.xlsx")
 
 
+def get_coin_gecko():
+    return requests.get(
+        "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=solana%2Cbitcoin%2Cethereum&order=market_cap_desc&per_page=100&page=1&sparkline=false"
+    ).json()
+
+
 def serve_layout():
     mango_sol_candles = requests.get(
         "https://event-history-api-candles.herokuapp.com/trades/address/2TgaaVoHgnSeEtXvWTx13zQeTf4hYWAMEiMQdcG6EwHi"
@@ -26,6 +32,19 @@ def serve_layout():
     ).json()["data"]
     mango_eth_candles = requests.get(
         "https://event-history-api-candles.herokuapp.com/trades/address/DVXWg6mfwFvHQbGyaHke4h3LE9pSkgbooDSDgA4JBC8d"
+    ).json()["data"]
+    return [mango_sol_candles, mango_btc_candles, mango_eth_candles]
+
+
+def get_fida_prices():
+    mango_sol_candles = requests.get(
+        "https://serum-api.bonfida.com/perps/trades?market=jeVdn6rxFPLpCH9E6jmk39NTNx2zgTmKiVXBDiApXaV"
+    ).json()["data"]
+    mango_btc_candles = requests.get(
+        "https://serum-api.bonfida.com/perps/trades?market=475P8ZX3NrzyEMJSFHt9KCMjPpWBWGa6oNxkWcwww2BR"
+    ).json()["data"]
+    mango_eth_candles = requests.get(
+        "https://serum-api.bonfida.com/perps/trades?market=3ds9ZtmQfHED17tXShfC1xEsZcfCvmT8huNG79wa4MHg"
     ).json()["data"]
     return [mango_sol_candles, mango_btc_candles, mango_eth_candles]
 
@@ -84,13 +103,13 @@ app.layout = html.Div(
         ),
         html.H2("platyperps"),
         html.H4("~comparing perputual swap prices on Solana DEXs~"),
-        html.H4("(updates every 5 seconds, please be patient with loads! 🐢 )"),
+        html.H4("(updates every 10 seconds, please be patient with loads! 🐢 )"),
         dcc.Loading(
             id="loading-1", type="default", children=html.Div(id="loading-output-1")
         ),
         dcc.Interval(
             id="interval-component",
-            interval=1 * 5000,
+            interval=1 * 10000,
             n_intervals=0,  # in milliseconds
         ),
         html.H5("Overview"),
@@ -107,7 +126,7 @@ app.layout = html.Div(
             sort_mode="multi",
             # column_selectable="single",
             # row_selectable="multi",
-            # row_deletable=True,
+            row_deletable=True,
             selected_columns=[],
             selected_rows=[],
             page_action="native",
@@ -246,14 +265,26 @@ def update_metrics(n, selected_value):
     maintenant = datetime.datetime.utcnow()
 
     mango_prices_full = serve_layout()
+    fida_prices_full = get_fida_prices()
     drift_prices_full = get_drift_prices()
 
     drift_prices_selected = None
     rr = None
     style = {"padding": "5px", "fontSize": "16px"}
-
+    coingeckp = get_coin_gecko()
     dds = {}
     for key, val in ({0: "SOL", 1: "BTC", 2: "ETH"}).items():
+        fida_prices = fida_prices_full[key]
+        fida_price_latest = fida_prices[0]
+        fida_price_change = fida_price_latest["markPrice"] - fida_prices[1]["markPrice"]
+        # mango_price_change_dir = "up" if mango_price_change > 0 else "down"
+        fida_last_trade = (
+            str(
+                (maintenant - pd.to_datetime(fida_price_latest["time"] * 1e6)).seconds
+            ).split(".")[0]
+            + " seconds ago"
+        )
+
         mango_prices = mango_prices_full[key]
         mango_price_latest = mango_prices[0]
         mango_price_change = mango_price_latest["price"] - mango_prices[1]["price"]
@@ -264,6 +295,7 @@ def update_metrics(n, selected_value):
             ).split(".")[0]
             + " seconds ago"
         )
+
         drift_prices = drift_prices_full[key]
 
         drift_price_latest = drift_prices[0]["afterPrice"]
@@ -276,26 +308,45 @@ def update_metrics(n, selected_value):
         )
 
         drift_sol_card = (
-            str(round(drift_price_latest, 1))
+            "{:.2f}".format(drift_price_latest)
             # + "\n (last trade: "
             # + drift_last_trade
             # + ")"
         )
 
         mango_sol_card = (
-            str(round(mango_price_latest["price"], 1))
+            "{:.2f}".format(mango_price_latest["price"])
             # + "\n (last trade: "
             # + mango_last_trade
             # + ")"
         )
+
+        fida_sol_card = (
+            "{:.2f}".format(fida_price_latest["markPrice"])
+            # + "\n (last trade: "
+            # + drift_last_trade
+            # + ")"
+        )
+
+        coingecko_card1 = [x for x in coingeckp if x["symbol"].lower() == val.lower()][
+            0
+        ]
+
         dds[val] = [
             drift_sol_card,
             mango_sol_card,
+            fida_sol_card,
+            "{:.2f}".format(coingecko_card1["current_price"]),
         ]
 
         if val in selected_value:
             rr = [
-                html.Div("prices for {}:".format(selected_value)),
+                html.Div(
+                    "{}".format(selected_value)
+                    + " (coingecko={:.2f})".format(coingecko_card1["current_price"])
+                    + " last page update: "
+                    + maintenant.strftime("%Y/%m/%d %H:%M:%S UTC"),
+                ),
                 html.Br(),
                 html.Img(
                     src="static/logo_drift.png",
@@ -307,8 +358,15 @@ def update_metrics(n, selected_value):
                         "padding-right": 10,
                     },
                 ),
-                html.Code(
-                    "Drift Price: {0:.2f}".format(drift_price_latest), style=style
+                html.A(
+                    html.Code(
+                        "Drift "
+                        + selected_value
+                        + ": {0:.2f}".format(drift_price_latest),
+                        style=style,
+                    ),
+                    href="https://alpha.drift.trade/" + selected_value.split("-")[0],
+                    target="_",
                 ),
                 html.Br(),
                 html.Code(
@@ -330,9 +388,15 @@ def update_metrics(n, selected_value):
                         "padding-right": 10,
                     },
                 ),
-                html.Code(
-                    "Mango Price: {0:.2f}".format(mango_price_latest["price"]),
-                    style=style,
+                html.A(
+                    html.Code(
+                        "Mango "
+                        + selected_value
+                        + ": {0:.2f}".format(mango_price_latest["price"]),
+                        style=style,
+                    ),
+                    href="https://trade.mango.markets/market?name=" + selected_value,
+                    target="_",
                 ),
                 html.Br(),
                 html.Code(
@@ -350,7 +414,7 @@ def update_metrics(n, selected_value):
 
     mango_v_drift = pd.DataFrame(
         dds,
-        index=["Drift", "Mango"],
+        index=["Drift", "Mango", "Bonfida", "(CoinGecko)"],
     )
 
     mango_v_drift.index.name = "Protocol"
