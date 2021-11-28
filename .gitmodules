@@ -1,3 +1,6 @@
 [submodule "drift-py"]
 	path = drift-py
 	url = https://github.com/drift-labs/drift-py
+[submodule "mango-explorer"]
+        path = mango-explorer
+        url = https://github.com/blockworks-foundation/mango-explorer
