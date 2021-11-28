@@ -45,27 +45,34 @@ def make_header() -> html.Header:
                 children=[
                     dcc.Tabs(
                         id="navigation-tabs",
-                        value="tab-port-map",
+                        value="tab-port-price",
                         children=[
                             dcc.Tab(
                                 label="Price",
-                                value="tab-port-map",
+                                value="tab-port-price",
                                 className="dash-tab",
                                 selected_className="dash-tab-selected",
                             ),
                             dcc.Tab(
                                 label="Funding",
-                                value="tab-port-stats",
+                                value="tab-port-funding",
                                 className="dash-tab",
                                 selected_className="dash-tab-selected",
                                 disabled=True,
                             ),
                             dcc.Tab(
                                 label="Users",
-                                value="tab-port-compare",
+                                value="tab-port-users",
                                 className="dash-tab",
                                 selected_className="dash-tab-selected",
                                 disabled=True,
+                            ),
+                            dcc.Tab(
+                                label="Drift Stats",
+                                value="tab-port-drift",
+                                className="dash-tab",
+                                selected_className="dash-tab-selected",
+                                disabled=False,
                             ),
                         ],
                     ),
