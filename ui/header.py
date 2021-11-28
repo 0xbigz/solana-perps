@@ -9,14 +9,6 @@ def make_header() -> html.Header:
     """
     return html.Header(
         children=[
-            # Icon and title container
-            # html.Div(
-            #     className="dash-title-container",
-            #     children=[
-            #         html.Img(className="dash-icon", src="assets/img/ship-1.svg"),
-            #         html.H1(className="dash-title", children=["Dash ports analytics"]),
-            #     ],
-            # ),
             html.A(
                 [
                     html.Span(
@@ -43,41 +35,29 @@ def make_header() -> html.Header:
             # create navigator with buttons
             html.Nav(
                 children=[
-                    dcc.Tabs(
-                        id="navigation-tabs",
-                        value="tab-port-price",
-                        children=[
-                            dcc.Tab(
-                                label="Price",
-                                value="tab-port-price",
-                                className="dash-tab",
-                                selected_className="dash-tab-selected",
+                    html.Div(
+                        [
+                            dcc.Link(
+                                "Comparison",
+                                href="/compare",
+                                className="tab first",
+                                id="tab-compare",
                             ),
-                            dcc.Tab(
-                                label="Funding",
-                                value="tab-port-funding",
-                                className="dash-tab",
-                                selected_className="dash-tab-selected",
-                                disabled=True,
+                            dcc.Link(
+                                "Drift",
+                                href="/drift",
+                                className="tab",
+                                id="tab-drift",
                             ),
-                            dcc.Tab(
-                                label="Users",
-                                value="tab-port-users",
-                                className="dash-tab",
-                                selected_className="dash-tab-selected",
-                                disabled=True,
-                            ),
-                            dcc.Tab(
-                                label="Drift Stats",
-                                value="tab-port-drift",
-                                className="dash-tab",
-                                selected_className="dash-tab-selected",
-                                disabled=False,
+                            dcc.Link(
+                                "More",
+                                href="/more",
+                                className="tab",
+                                id="tab-more",
                             ),
                         ],
+                        className="row all-tabs",
                     ),
-                    # TODO Dario - remove below button
-                    # html.Button(id='btn-sidebar-request-port', className='btn-sidebar-request-port', children=[strings.BTN_REQUEST_PORT])
                 ]
             ),
         ]

@@ -4,6 +4,7 @@ import dash_table
 import dash_core_components as dcc
 import dash_html_components as html
 import pandas as pd
+import numpy as np
 
 from ui import header, footer, driftsummary
 
@@ -23,47 +24,56 @@ def get_coin_gecko():
     ).json()
 
 
-def serve_layout():
-    mango_sol_candles = requests.get(
-        "https://event-history-api-candles.herokuapp.com/trades/address/2TgaaVoHgnSeEtXvWTx13zQeTf4hYWAMEiMQdcG6EwHi"
-    ).json()["data"]
-    mango_btc_candles = requests.get(
-        "https://event-history-api-candles.herokuapp.com/trades/address/DtEcjPLyD4YtTBB4q8xwFZ9q49W89xZCZtJyrGebi5t8"
-    ).json()["data"]
-    mango_eth_candles = requests.get(
-        "https://event-history-api-candles.herokuapp.com/trades/address/DVXWg6mfwFvHQbGyaHke4h3LE9pSkgbooDSDgA4JBC8d"
-    ).json()["data"]
-    return [mango_sol_candles, mango_btc_candles, mango_eth_candles]
+def get_mango_prices():
+    try:
+        mango_sol_candles = requests.get(
+            "https://event-history-api-candles.herokuapp.com/trades/address/2TgaaVoHgnSeEtXvWTx13zQeTf4hYWAMEiMQdcG6EwHi"
+        ).json()["data"]
+        mango_btc_candles = requests.get(
+            "https://event-history-api-candles.herokuapp.com/trades/address/DtEcjPLyD4YtTBB4q8xwFZ9q49W89xZCZtJyrGebi5t8"
+        ).json()["data"]
+        mango_eth_candles = requests.get(
+            "https://event-history-api-candles.herokuapp.com/trades/address/DVXWg6mfwFvHQbGyaHke4h3LE9pSkgbooDSDgA4JBC8d"
+        ).json()["data"]
+        return [mango_sol_candles, mango_btc_candles, mango_eth_candles]
+    except:
+        return [[{"price": np.nan, "time": np.nan}] * 2] * 3
 
 
 def get_fida_prices():
-    mango_sol_candles = requests.get(
-        "https://serum-api.bonfida.com/perps/trades?market=jeVdn6rxFPLpCH9E6jmk39NTNx2zgTmKiVXBDiApXaV"
-    ).json()["data"]
-    mango_btc_candles = requests.get(
-        "https://serum-api.bonfida.com/perps/trades?market=475P8ZX3NrzyEMJSFHt9KCMjPpWBWGa6oNxkWcwww2BR"
-    ).json()["data"]
-    mango_eth_candles = requests.get(
-        "https://serum-api.bonfida.com/perps/trades?market=3ds9ZtmQfHED17tXShfC1xEsZcfCvmT8huNG79wa4MHg"
-    ).json()["data"]
-    return [mango_sol_candles, mango_btc_candles, mango_eth_candles]
+    try:
+        mango_sol_candles = requests.get(
+            "https://serum-api.bonfida.com/perps/trades?market=jeVdn6rxFPLpCH9E6jmk39NTNx2zgTmKiVXBDiApXaV"
+        ).json()["data"]
+        mango_btc_candles = requests.get(
+            "https://serum-api.bonfida.com/perps/trades?market=475P8ZX3NrzyEMJSFHt9KCMjPpWBWGa6oNxkWcwww2BR"
+        ).json()["data"]
+        mango_eth_candles = requests.get(
+            "https://serum-api.bonfida.com/perps/trades?market=3ds9ZtmQfHED17tXShfC1xEsZcfCvmT8huNG79wa4MHg"
+        ).json()["data"]
+        return [mango_sol_candles, mango_btc_candles, mango_eth_candles]
+    except:
+        return [[{"markPrice": np.nan, "time": np.nan}] * 2] * 3
 
 
 def get_drift_prices():
-    drift_p0 = requests.get(
-        "https://mainnet-beta.history.drift.trade/trades/marketIndex/0"
-    ).json()
-    drift_p1 = requests.get(
-        "https://mainnet-beta.history.drift.trade/trades/marketIndex/1"
-    ).json()
-    drift_p2 = requests.get(
-        "https://mainnet-beta.history.drift.trade/trades/marketIndex/2"
-    ).json()
-    return [
-        drift_p0["data"]["trades"],
-        drift_p1["data"]["trades"],
-        drift_p2["data"]["trades"],
-    ]
+    try:
+        drift_p0 = requests.get(
+            "https://mainnet-beta.history.drift.trade/trades/marketIndex/0"
+        ).json()
+        drift_p1 = requests.get(
+            "https://mainnet-beta.history.drift.trade/trades/marketIndex/1"
+        ).json()
+        drift_p2 = requests.get(
+            "https://mainnet-beta.history.drift.trade/trades/marketIndex/2"
+        ).json()
+        return [
+            drift_p0["data"]["trades"],
+            drift_p1["data"]["trades"],
+            drift_p2["data"]["trades"],
+        ]
+    except:
+        return [[{"afterPrice": np.nan, "ts": np.nan}] * 2] * 3
 
 
 mango_v_drift = pd.DataFrame(
@@ -90,9 +100,19 @@ app.layout = html.Div(
             id="loading-1", type="default", children=html.Div(id="loading-output-1")
         ),
         html.Div("loading...", id="tab-content"),
+        html.Br(),
+        html.Br(),
+        html.Br(),
+        footer.make_footer(),
+    ]
+)
+
+page_1_layout = html.Div(
+    [
+        html.H1("Protocol Compare"),
         dcc.Interval(
             id="interval-component",
-            interval=1 * 2000,
+            interval=1 * 6000,
             n_intervals=0,  # in milliseconds
         ),
         html.H5("Overview"),
@@ -124,7 +144,7 @@ app.layout = html.Div(
         html.Br(),
         html.Br(),
         html.Br(),
-        html.H5("By Asset"),
+        html.H5("Price By Asset"),
         dcc.Dropdown(
             id="dropdown",
             options=[
@@ -133,27 +153,40 @@ app.layout = html.Div(
             value="SOL-PERP",
         ),
         html.Div("loading...", id="live-update-text"),
-        html.Br(),
-        html.Br(),
-        html.Br(),
+    ]
+)
+
+page_2_layout = html.Div(
+    [
+        html.H1("Drift Stats"),
         html.H5("Drift Summary"),
         driftsummary.make_drift_summary(),
         html.Br(),
-        footer.make_footer(),
     ]
 )
 
 
 @app.callback(
-    Output("tab-content", "children"),
     [
-        Input("navigation-tabs", "value"),
-        Input("url", "pathname"),
+        dash.dependencies.Output("tab-content", "children"),
+        dash.dependencies.Output("tab-compare", "style"),
+        dash.dependencies.Output("tab-drift", "style"),
+        dash.dependencies.Output("tab-more", "style"),
     ],
+    [dash.dependencies.Input("url", "pathname")],
 )
-def showtabpage(tab, url):
-    if tab == "tab-port-price":
-        return "price tab"
+def display_page(pathname):
+    if pathname == "/" or pathname == "/compare":
+        return page_1_layout, {"background-color": "gray", "color": "white"}, {}, {}
+    elif pathname == "/drift":
+        return page_2_layout, {}, {"background-color": "gray", "color": "white"}, {}
+    else:
+        return (
+            html.Div([html.H1("Error 404 - Page not found")]),
+            {},
+            {},
+            {"background-color": "white", "color": "black"},
+        )
 
 
 @app.callback(
@@ -170,7 +203,7 @@ def showtabpage(tab, url):
 def update_metrics(n, selected_value):
     maintenant = datetime.datetime.utcnow()
 
-    mango_prices_full = serve_layout()
+    mango_prices_full = get_mango_prices()
     fida_prices_full = get_fida_prices()
     drift_prices_full = get_drift_prices()
 
@@ -255,7 +288,7 @@ def update_metrics(n, selected_value):
                 ),
                 html.Br(),
                 html.Img(
-                    src="static/logo_drift.png",
+                    src="assets/logo_drift.png",
                     style={
                         "height": "45px",
                         # "width": "2%",
@@ -284,7 +317,7 @@ def update_metrics(n, selected_value):
                 html.Br(),
                 html.Br(),
                 html.Img(
-                    src="static/logo_mango.png",
+                    src="assets/logo_mango.png",
                     style={
                         "height": "45px",
                         # "width": "22%",

@@ -124,6 +124,7 @@ def make_drift_summary() -> html.Header:
         figs.append(
             dfplt.plot(title=MARKET_INDEX_TO_PERP[marketIndex] + " funding rate %")
         )
+    user_summary_df = drift.user_summary()
 
     return html.Header(
         children=
@@ -156,6 +157,7 @@ def make_drift_summary() -> html.Header:
                 page_action="native",
                 page_current=0,
                 page_size=8,
+                export_format="csv",
             ),
             html.H4("Recent Trader Summary"),
             dash_table.DataTable(
@@ -171,7 +173,7 @@ def make_drift_summary() -> html.Header:
                 },
                 data=lead_trade_table.to_dict("records"),
                 # editable=True,
-                # filter_action="native",
+                filter_action="native",
                 sort_action="native",
                 sort_mode="multi",
                 # column_selectable="single",
@@ -182,6 +184,7 @@ def make_drift_summary() -> html.Header:
                 page_action="native",
                 page_current=0,
                 page_size=5,
+                export_format="csv",
             ),
             html.H4(
                 "Recent cumulative deposits (note: total deposits are likely greater)"
@@ -190,4 +193,33 @@ def make_drift_summary() -> html.Header:
         ]
         + [html.H4("Hourly funding rates")]
         + [dcc.Graph(figure=figX) for figX in figs]
+        + [
+            html.H4("Trader Live to Date Performance"),
+            dash_table.DataTable(
+                id="trader_live_to_date",
+                columns=[
+                    {"name": i, "id": i, "deletable": False, "selectable": True}
+                    for i in user_summary_df.columns
+                ],
+                style_data={
+                    "whiteSpace": "normal",
+                    "height": "auto",
+                    "lineHeight": "15px",
+                },
+                data=user_summary_df.to_dict("records"),
+                # editable=True,
+                filter_action="native",
+                sort_action="native",
+                sort_mode="multi",
+                # column_selectable="single",
+                # row_selectable="multi",
+                row_deletable=True,
+                selected_columns=[],
+                selected_rows=[],
+                page_action="native",
+                page_current=0,
+                page_size=10,
+                export_format="csv",
+            ),
+        ]
     )
