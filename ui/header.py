@@ -50,10 +50,10 @@ def make_header() -> html.Header:
                                 id="tab-drift",
                             ),
                             dcc.Link(
-                                "More",
-                                href="/more",
+                                "Mango",
+                                href="/mango",
                                 className="tab",
-                                id="tab-more",
+                                id="tab-mango",
                             ),
                         ],
                         className="row all-tabs",

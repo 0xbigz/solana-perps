@@ -6,7 +6,7 @@ import dash_html_components as html
 import pandas as pd
 import numpy as np
 
-from ui import header, footer, driftsummary
+from ui import header, footer, driftsummary, mangosummary
 
 import requests
 import datetime
@@ -58,21 +58,33 @@ def get_fida_prices():
 
 def get_drift_prices():
     try:
-        drift_p0 = requests.get(
-            "https://mainnet-beta.history.drift.trade/trades/marketIndex/0"
-        ).json()
-        drift_p1 = requests.get(
-            "https://mainnet-beta.history.drift.trade/trades/marketIndex/1"
-        ).json()
-        drift_p2 = requests.get(
-            "https://mainnet-beta.history.drift.trade/trades/marketIndex/2"
-        ).json()
-        return [
-            drift_p0["data"]["trades"],
-            drift_p1["data"]["trades"],
-            drift_p2["data"]["trades"],
+        # drift_p0 = requests.get(
+        #     "https://mainnet-beta.history.drift.trade/trades/marketIndex/0"
+        # ).json()
+        # drift_p1 = requests.get(
+        #     "https://mainnet-beta.history.drift.trade/trades/marketIndex/1"
+        # ).json()
+        # drift_p2 = requests.get(
+        #     "https://mainnet-beta.history.drift.trade/trades/marketIndex/2"
+        # ).json()
+        # return [
+        #     drift_p0["data"]["trades"],
+        #     drift_p1["data"]["trades"],
+        #     drift_p2["data"]["trades"],
+        # ]
+        drift = driftsummary.drift_py()
+        market_summary = driftsummary.drift_market_summary_df(drift)
+        print(market_summary)
+        mm = market_summary.set_index("FIELD").loc[
+            ["mark_price", "last_mark_price_twap_ts"]
         ]
-    except:
+        mm.index = ["afterPrice", "ts"]
+        # mm.columns = [0, 1, 2]
+        res = mm.T.to_dict("records")
+        print(res[0])
+        return res
+    except Exception as e:
+        print(e)
         return [[{"afterPrice": np.nan, "ts": np.nan}] * 2] * 3
 
 
@@ -107,54 +119,58 @@ app.layout = html.Div(
     ]
 )
 
-page_1_layout = html.Div(
-    [
-        html.H1("Protocol Compare"),
-        dcc.Interval(
-            id="interval-component",
-            interval=1 * 6000,
-            n_intervals=0,  # in milliseconds
-        ),
-        html.H5("Overview"),
-        dash_table.DataTable(
-            id="mango_v_drift_table",
-            columns=[
-                {"name": i, "id": i, "deletable": False, "selectable": True}
-                for i in mango_v_drift.columns
-            ],
-            style_data={
-                "whiteSpace": "normal",
-                "height": "auto",
-                "lineHeight": "15px",
-            },
-            data=mango_v_drift.to_dict("records"),
-            # editable=True,
-            # filter_action="native",
-            sort_action="native",
-            sort_mode="multi",
-            # column_selectable="single",
-            # row_selectable="multi",
-            row_deletable=True,
-            selected_columns=[],
-            selected_rows=[],
-            page_action="native",
-            page_current=0,
-            page_size=5,
-        ),
-        html.Br(),
-        html.Br(),
-        html.Br(),
-        html.H5("Price By Asset"),
-        dcc.Dropdown(
-            id="dropdown",
-            options=[
-                {"label": i, "value": i} for i in ["SOL-PERP", "BTC-PERP", "ETH-PERP"]
-            ],
-            value="SOL-PERP",
-        ),
-        html.Div("loading...", id="live-update-text"),
-    ]
-)
+
+def page_1_layout():
+    return html.Div(
+        [
+            html.H1("Protocol Compare"),
+            dcc.Interval(
+                id="interval-component",
+                interval=1 * 6000,
+                n_intervals=0,  # in milliseconds
+            ),
+            html.H5("Overview"),
+            dash_table.DataTable(
+                id="mango_v_drift_table",
+                columns=[
+                    {"name": i, "id": i, "deletable": False, "selectable": True}
+                    for i in mango_v_drift.columns
+                ],
+                style_data={
+                    "whiteSpace": "normal",
+                    "height": "auto",
+                    "lineHeight": "15px",
+                },
+                data=mango_v_drift.to_dict("records"),
+                # editable=True,
+                # filter_action="native",
+                sort_action="native",
+                sort_mode="multi",
+                # column_selectable="single",
+                # row_selectable="multi",
+                row_deletable=True,
+                selected_columns=[],
+                selected_rows=[],
+                page_action="native",
+                page_current=0,
+                page_size=5,
+            ),
+            html.Br(),
+            html.Br(),
+            html.Br(),
+            html.H5("Price By Asset"),
+            dcc.Dropdown(
+                id="dropdown",
+                options=[
+                    {"label": i, "value": i}
+                    for i in ["SOL-PERP", "BTC-PERP", "ETH-PERP"]
+                ],
+                value="SOL-PERP",
+            ),
+            html.Div("loading...", id="live-update-text"),
+        ]
+    )
+
 
 page_2_layout = html.Div(
     [
@@ -166,20 +182,32 @@ page_2_layout = html.Div(
 )
 
 
+page_3_layout = html.Div(
+    [
+        html.H5("Mango Summary"),
+        mangosummary.make_pyth_summary(),
+        mangosummary.make_mango_summary(),
+        html.Br(),
+    ]
+)
+
+
 @app.callback(
     [
         dash.dependencies.Output("tab-content", "children"),
         dash.dependencies.Output("tab-compare", "style"),
         dash.dependencies.Output("tab-drift", "style"),
-        dash.dependencies.Output("tab-more", "style"),
+        dash.dependencies.Output("tab-mango", "style"),
     ],
     [dash.dependencies.Input("url", "pathname")],
 )
 def display_page(pathname):
     if pathname == "/" or pathname == "/compare":
-        return page_1_layout, {"background-color": "gray", "color": "white"}, {}, {}
+        return page_1_layout(), {"background-color": "gray", "color": "white"}, {}, {}
     elif pathname == "/drift":
         return page_2_layout, {}, {"background-color": "gray", "color": "white"}, {}
+    elif pathname == "/mango":
+        return page_3_layout, {}, {}, {"background-color": "gray", "color": "white"}
     else:
         return (
             html.Div([html.H1("Error 404 - Page not found")]),
@@ -237,12 +265,12 @@ def update_metrics(n, selected_value):
 
         drift_prices = drift_prices_full[key]
 
-        drift_price_latest = drift_prices[0]["afterPrice"]
-        drift_price_change = drift_price_latest - drift_prices[1]["afterPrice"]
+        drift_price_latest = drift_prices["afterPrice"]
+        drift_price_change = (
+            np.nan
+        )  # 0  # drift_price_latest - drift_prices[1]["afterPrice"]
         drift_last_trade = (
-            str(
-                (maintenant - pd.to_datetime(drift_prices[0]["ts"] * 1e6)).seconds
-            ).split(".")[0]
+            str((maintenant - pd.to_datetime(drift_prices["ts"])).seconds).split(".")[0]
             + " seconds ago"
         )
 

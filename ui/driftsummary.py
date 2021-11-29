@@ -21,26 +21,39 @@ import sys
 sys.path.append("drift-py/")
 from drift.drift import Drift, load_config, MARKET_INDEX_TO_PERP
 
-USER_AUTHORITY = ""
-drift = Drift(USER_AUTHORITY)
-asyncio.run(drift.load())
 
-history_df = asyncio.run(drift.load_history_df())
+def drift_py():
+    USER_AUTHORITY = ""
+    drift = Drift(USER_AUTHORITY)
+    asyncio.run(drift.load())
+    return drift
 
-print(history_df.keys())
 
-drift_market_summary = drift.market_summary()
-drift_market_summary.columns = drift_market_summary.columns.astype(str)
-drift_market_summary = drift_market_summary
-drift_market_summary = (
-    drift_market_summary.drop(["oracle", "market_name", "initialized"], axis=0)
-    .reset_index()
-    .round(4)
-)
-drift_market_summary.columns = ["FIELD", "SOL-PERP", "BTC-PERP", "ETH-PERP"]
+def drift_history_df(drift):
+    history_df = asyncio.run(drift.load_history_df())
+    return history_df
+    # print(history_df.keys())
+
+
+def drift_market_summary_df(drift):
+    drift_market_summary = drift.market_summary()
+    drift_market_summary.columns = drift_market_summary.columns.astype(str)
+    drift_market_summary = drift_market_summary
+    drift_market_summary = (
+        drift_market_summary.drop(["oracle", "market_name", "initialized"], axis=0)
+        .reset_index()
+        .round(4)
+    )
+    drift_market_summary.columns = ["FIELD", "SOL-PERP", "BTC-PERP", "ETH-PERP"]
+    return drift_market_summary
+
 
 import dash_core_components as dcc
 import dash_html_components as html
+
+drift = drift_py()
+history_df = drift_history_df(drift)
+drift_market_summary = drift_market_summary_df(drift)
 
 
 def make_drift_summary() -> html.Header:
