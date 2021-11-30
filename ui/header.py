@@ -16,7 +16,8 @@ def make_header() -> html.Header:
                             html.Img(
                                 src="https://pbs.twimg.com/profile_banners/1388194344390119426/1637877290/1500x500",
                                 style={
-                                    "height": "50px",
+                                    "max-height": "50px",
+                                    "max-width": "12%",
                                     # "width": "4%",
                                     # "float": "left",
                                     "position": "relative",
@@ -34,7 +35,8 @@ def make_header() -> html.Header:
                             html.Img(
                                 src="https://pbs.twimg.com/profile_banners/1388194344390119426/1637877290/1500x500",
                                 style={
-                                    "height": "50px",
+                                    "max-height": "50px",
+                                    "max-width": "12%",
                                     # "width": "4%",
                                     # "float": "left",
                                     "position": "relative",

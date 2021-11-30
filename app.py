@@ -129,44 +129,58 @@ def page_1_layout():
                 n_intervals=0,  # in milliseconds
             ),
             html.H5("Overview"),
-            dash_table.DataTable(
-                id="mango_v_drift_table",
-                columns=[
-                    {"name": i, "id": i, "deletable": False, "selectable": True}
-                    for i in mango_v_drift.columns
+            html.Div(
+                [
+                    dash_table.DataTable(
+                        id="mango_v_drift_table",
+                        columns=[
+                            {"name": i, "id": i, "deletable": False, "selectable": True}
+                            for i in mango_v_drift.columns
+                        ],
+                        style_data={
+                            "whiteSpace": "normal",
+                            "height": "auto",
+                            "lineHeight": "15px",
+                        },
+                        data=mango_v_drift.to_dict("records"),
+                        # editable=True,
+                        # filter_action="native",
+                        sort_action="native",
+                        sort_mode="multi",
+                        # column_selectable="single",
+                        # row_selectable="multi",
+                        row_deletable=True,
+                        selected_columns=[],
+                        selected_rows=[],
+                        page_action="native",
+                        page_current=0,
+                        page_size=5,
+                    ),
                 ],
-                style_data={
-                    "whiteSpace": "normal",
-                    "height": "auto",
-                    "lineHeight": "15px",
+                style={
+                    "max-width": "500px",
                 },
-                data=mango_v_drift.to_dict("records"),
-                # editable=True,
-                # filter_action="native",
-                sort_action="native",
-                sort_mode="multi",
-                # column_selectable="single",
-                # row_selectable="multi",
-                row_deletable=True,
-                selected_columns=[],
-                selected_rows=[],
-                page_action="native",
-                page_current=0,
-                page_size=5,
             ),
             html.Br(),
             html.Br(),
             html.Br(),
             html.H5("Price By Asset"),
-            dcc.Dropdown(
-                id="dropdown",
-                options=[
-                    {"label": i, "value": i}
-                    for i in ["SOL-PERP", "BTC-PERP", "ETH-PERP"]
+            html.Div(
+                [
+                    dcc.Dropdown(
+                        id="dropdown",
+                        options=[
+                            {"label": i, "value": i}
+                            for i in ["SOL-PERP", "BTC-PERP", "ETH-PERP"]
+                        ],
+                        value="SOL-PERP",
+                    ),
+                    html.Div("loading...", id="live-update-text"),
                 ],
-                value="SOL-PERP",
+                style={
+                    "max-width": "500px",
+                },
             ),
-            html.Div("loading...", id="live-update-text"),
         ]
     )
 
@@ -266,9 +280,12 @@ def update_metrics(n, selected_value):
         fida_price_latest = fida_prices[0]
         fida_price_change = fida_price_latest["markPrice"] - fida_prices[1]["markPrice"]
         # mango_price_change_dir = "up" if mango_price_change > 0 else "down"
+        # print(fida_price_latest)
         fida_last_trade = (
             str(
-                (maintenant - pd.to_datetime(fida_price_latest["time"] * 1e6)).seconds
+                (
+                    maintenant - pd.to_datetime(int(fida_price_latest["time"]) * 1e9)
+                ).seconds
             ).split(".")[0]
             + " seconds ago"
         )
@@ -411,7 +428,8 @@ def update_metrics(n, selected_value):
                         + ": {0:.2f}".format(fida_price_latest["markPrice"]),
                         style=style,
                     ),
-                    href="https://perps.bonfida.org/#/trade/" + selected_value,
+                    href="https://perps.bonfida.org/#/trade/"
+                    + selected_value.replace("-", ""),
                     target="_",
                 ),
                 html.Br(),

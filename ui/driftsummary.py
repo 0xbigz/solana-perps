@@ -125,8 +125,16 @@ def make_funding_figs(history_df):
     thefig.columns = [str(x) for x in thefig.columns]
     print(thefig)
     figs = [thefig.plot()]
-
-    return figs
+    print(thefig)
+    funding_stats = thefig.tail(24).describe()
+    funding_stats = funding_stats[
+        [
+            "('SOL-PERP', 'balanced_funding')",
+            "('BTC-PERP', 'balanced_funding')",
+            "('ETH-PERP', 'balanced_funding')",
+        ]
+    ]
+    return (figs, funding_stats)
 
 
 def make_deposit_fig(history_df):
@@ -164,7 +172,9 @@ def make_drift_summary(drift) -> html.Header:
     history_df = drift_history_df(drift)
 
     lead_trade_table = make_ts(history_df)
-    figs = make_funding_figs(history_df)
+    xx = make_funding_figs(history_df)
+    figs = xx[0]
+    funding_stats = xx[1]
     deposit_fig = make_deposit_fig(history_df)
 
     user_summary_df = drift.user_summary()
@@ -177,23 +187,6 @@ def make_drift_summary(drift) -> html.Header:
             ),
             html.Br(),
             html.H4("Markets Summary"),
-        ]
-        # + [
-        #     html.Div(
-        #         [
-        #             dbc.Row(
-        #                 [
-        #                     dbc.Col([card]),
-        #                     dbc.Col([card]),
-        #                     dbc.Col([card]),
-        #                     dbc.Col([card]),
-        #                     dbc.Col([card]),
-        #                 ]
-        #             ),
-        #         ]
-        #     )
-        # ]
-        + [
             dash_table.DataTable(
                 id="fees-data",
                 columns=[
@@ -245,10 +238,23 @@ def make_drift_summary(drift) -> html.Header:
                 page_size=5,
                 export_format="csv",
             ),
-        ]
-        + [html.H4("Hourly funding rates")]
-        + [dcc.Graph(figure=figX) for figX in figs]
-        + [
+            html.H4("Hourly funding rates"),
+            dash_table.DataTable(
+                id="funding-data",
+                columns=[
+                    {"name": i, "id": i, "deletable": False, "selectable": True}
+                    for i in funding_stats.columns
+                ],
+                data=funding_stats.to_dict("records"),
+                editable=True,
+                selected_columns=[],
+                selected_rows=[],
+                page_action="native",
+                page_current=0,
+                page_size=8,
+                export_format="csv",
+            ),
+            html.Div([dcc.Graph(figure=figX) for figX in figs]),
             html.H4("Trader Leaderboard"),
             dash_table.DataTable(
                 id="trader_live_to_date",
