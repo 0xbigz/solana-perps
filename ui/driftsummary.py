@@ -15,7 +15,7 @@ import base64
 import os
 import asyncio
 
-import dash_bootstrap_components as dbc
+# import dash_bootstrap_components as dbc
 
 import sys
 
@@ -143,15 +143,15 @@ def make_deposit_fig(history_df):
     return fig
 
 
-card = dbc.Card(
-    dbc.CardBody(
-        [
-            html.H4("Title", id="card-title"),
-            html.H2("100", id="card-value"),
-            html.P("Description", id="card-description"),
-        ]
-    )
-)
+# card = dbc.Card(
+#     dbc.CardBody(
+#         [
+#             html.H4("Title", id="card-title"),
+#             html.H2("100", id="card-value"),
+#             html.P("Description", id="card-description"),
+#         ]
+#     )
+# )
 
 
 def make_drift_summary(drift) -> html.Header:
