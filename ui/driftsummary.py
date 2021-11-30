@@ -15,6 +15,7 @@ import base64
 import os
 import asyncio
 
+import dash_bootstrap_components as dbc
 
 import sys
 
@@ -51,12 +52,8 @@ def drift_market_summary_df(drift):
 import dash_core_components as dcc
 import dash_html_components as html
 
-drift = drift_py()
-history_df = drift_history_df(drift)
-drift_market_summary = drift_market_summary_df(drift)
 
-
-def make_ts():
+def make_ts(history_df):
     trdf = history_df["trade"].copy().sort_index()
     trdf["user_authority"] = trdf["user_authority"].astype(str)
     duration = trdf["fee"].index[-1] - trdf["fee"].index[0]
@@ -85,7 +82,9 @@ def make_ts():
     return toshow.reset_index()
 
 
-def make_funding_figs():
+def make_funding_figs(history_df):
+    dfs_to_plt = {}
+
     frfull = history_df["fundingRate"].sort_index()
     figs = []
     for marketIndex in frfull.market_index.unique():
@@ -120,13 +119,17 @@ def make_funding_figs():
             },
             axis=1,
         )
-        figs.append(
-            dfplt.plot(title=MARKET_INDEX_TO_PERP[marketIndex] + " funding rate %")
-        )
+        dfs_to_plt[MARKET_INDEX_TO_PERP[marketIndex]] = dfplt.resample("1H").bfill()
+
+    thefig = pd.concat(dfs_to_plt, axis=1)
+    thefig.columns = [str(x) for x in thefig.columns]
+    print(thefig)
+    figs = [thefig.plot()]
+
     return figs
 
 
-def make_deposit_fig():
+def make_deposit_fig(history_df):
     deposits = history_df["deposit"].loc["2021":]
     d = deposits.direction[0]
     assert "deposit" in str(d).lower()
@@ -136,31 +139,60 @@ def make_deposit_fig():
         )
         / 1e6
     )
-    fig = deposit_ts.sort_index().cumsum().plot(title="recent deposits/withdraws")
+    fig = deposit_ts.sort_index().cumsum().plot()
     return fig
 
 
-def make_drift_summary() -> html.Header:
+card = dbc.Card(
+    dbc.CardBody(
+        [
+            html.H4("Title", id="card-title"),
+            html.H2("100", id="card-value"),
+            html.P("Description", id="card-description"),
+        ]
+    )
+)
+
+
+def make_drift_summary(drift) -> html.Header:
     """
     Returns a HTML Header element for the application Header.
     :return: HTML Header
     """
+    maintenant = datetime.datetime.utcnow()
 
-    lead_trade_table = make_ts()
-    figs = make_funding_figs()
+    history_df = drift_history_df(drift)
+
+    lead_trade_table = make_ts(history_df)
+    figs = make_funding_figs(history_df)
+    deposit_fig = make_deposit_fig(history_df)
+
     user_summary_df = drift.user_summary()
+    drift_market_summary = drift_market_summary_df(drift)
 
     return html.Header(
-        children=
-        # Icon and title container
-        # html.Div(
-        #     className="dash-title-container",
-        #     children=[
-        #         html.Img(className="dash-icon", src="assets/img/ship-1.svg"),
-        #         html.H1(className="dash-title", children=["Dash ports analytics"]),
-        #     ],
-        # ),
-        [html.H4("Markets Summary")]
+        children=[
+            html.Code(
+                "last update: " + maintenant.strftime("%Y/%m/%d: %H:%M:%S") + " UTC"
+            ),
+            html.Br(),
+            html.H4("Markets Summary"),
+        ]
+        # + [
+        #     html.Div(
+        #         [
+        #             dbc.Row(
+        #                 [
+        #                     dbc.Col([card]),
+        #                     dbc.Col([card]),
+        #                     dbc.Col([card]),
+        #                     dbc.Col([card]),
+        #                     dbc.Col([card]),
+        #                 ]
+        #             ),
+        #         ]
+        #     )
+        # ]
         + [
             dash_table.DataTable(
                 id="fees-data",
@@ -182,8 +214,11 @@ def make_drift_summary() -> html.Header:
                 page_current=0,
                 page_size=8,
                 export_format="csv",
+                # style_table={
+                #     "width": "50%",
+                # },
             ),
-            html.H4("Recent Trader Summary"),
+            html.H4("Recent Trader Volume Summary"),
             dash_table.DataTable(
                 id="lead_trade_table",
                 columns=[
@@ -210,15 +245,11 @@ def make_drift_summary() -> html.Header:
                 page_size=5,
                 export_format="csv",
             ),
-            html.H4(
-                "Recent cumulative deposits (note: total deposits are likely greater)"
-            ),
-            dcc.Graph(figure=make_deposit_fig()),
         ]
         + [html.H4("Hourly funding rates")]
         + [dcc.Graph(figure=figX) for figX in figs]
         + [
-            html.H4("Trader Live to Date Performance"),
+            html.H4("Trader Leaderboard"),
             dash_table.DataTable(
                 id="trader_live_to_date",
                 columns=[
@@ -245,5 +276,7 @@ def make_drift_summary() -> html.Header:
                 page_size=10,
                 export_format="csv",
             ),
+            html.H4("Recent cumulative deposits (note: total deposits greater)"),
+            dcc.Graph(figure=deposit_fig),
         ]
     )

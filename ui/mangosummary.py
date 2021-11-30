@@ -29,7 +29,7 @@ import threading
 context = mango.ContextBuilder.build(cluster_name="mainnet")
 
 
-def stream_pyth(market="BTC/USDC"):
+def stream_pyth(market="SOL/USDC"):
     # Load the market
     stub = context.market_lookup.find_by_symbol(market)
     market = mango.ensure_market_loaded(context, stub)
@@ -40,17 +40,13 @@ def stream_pyth(market="BTC/USDC"):
 
 
 def load_mango_data(market="SOL-PERP"):
-    # Create a 'devnet' Context
-    context = mango.ContextBuilder.build(cluster_name="mainnet")
+    # Find the addresses associated with the Perp market
+    perp_stub = context.market_lookup.find_by_symbol("perp:" + market)
 
-    # # Load the market
-    # stub = context.market_lookup.find_by_symbol(market)
-    # market = mango.ensure_market_loaded(context, stub)
-    # market_operations = mango.create_market_operations(
-    #     context, wallet, account, market, dry_run=False
-    # )
-    # ob = market_operations.load_orderbook()
-
+    # Load the rest of the on-chain metadata of the market
+    perp_market = mango.ensure_market_loaded(context, perp_stub)
+    # z = perp_market.fetch_funding(context)
+    return perp_market
     # bb = ob.asks[0]
     # return (bb.price, bb.quantity)
 
@@ -63,10 +59,16 @@ pyth_loader = stream_pyth()
 
 
 def make_pyth_summary() -> html.Header:
-    pythprice = pyth_loader.fetch_price(context)
+
+    maintenant = datetime.datetime.utcnow()
+
+    MARKET = "SOL-PERP"
+    pythprice = pyth_loader.fetch_price(MARKET.split("-")[0] + "/USDC")
     pythstr = ": {:.2f} ± {:.2f}".format(
         float(pythprice.mid_price), float(pythprice.confidence)
     )
+    perp_market = load_mango_data(MARKET)
+    z = perp_market.fetch_funding(context)
 
     return html.Header(
         children=
@@ -81,6 +83,12 @@ def make_pyth_summary() -> html.Header:
         [
             html.Code(
                 [
+                    html.Code(
+                        "last update: "
+                        + maintenant.strftime("%Y/%m/%d: %H:%M:%S")
+                        + " UTC"
+                    ),
+                    html.Br(),
                     """#BIG TODO HERE#""",
                     html.Br(),
                     html.Span(
@@ -93,6 +101,8 @@ def make_pyth_summary() -> html.Header:
                             pythstr,
                         ]
                     ),
+                    html.Br(),
+                    html.Code(z.rate),
                 ]
             ),
         ]

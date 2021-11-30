@@ -56,7 +56,7 @@ def get_fida_prices():
         return [[{"markPrice": np.nan, "time": np.nan}] * 2] * 3
 
 
-def get_drift_prices():
+def get_drift_prices(drift):
     try:
         # drift_p0 = requests.get(
         #     "https://mainnet-beta.history.drift.trade/trades/marketIndex/0"
@@ -72,7 +72,6 @@ def get_drift_prices():
         #     drift_p1["data"]["trades"],
         #     drift_p2["data"]["trades"],
         # ]
-        drift = driftsummary.drift_py()
         market_summary = driftsummary.drift_market_summary_df(drift)
         print(market_summary)
         mm = market_summary.set_index("FIELD").loc[
@@ -100,9 +99,6 @@ mango_v_drift["Protocol"] = pd.Series(["Drift", "Mango", "Bonfida", "(CoinGecko)
 
 app = dash.Dash(__name__)
 server = app.server
-
-drift_prices = get_drift_prices()
-
 
 app.layout = html.Div(
     [
@@ -175,10 +171,13 @@ def page_1_layout():
     )
 
 
+drift = driftsummary.drift_py()
+
+
 page_2_layout = html.Div(
     [
         html.H5("Drift Summary"),
-        driftsummary.make_drift_summary(),
+        driftsummary.make_drift_summary(drift),
         html.Br(),
     ]
 )
@@ -250,9 +249,12 @@ def display_page(pathname):
 def update_metrics(n, selected_value):
     maintenant = datetime.datetime.utcnow()
 
+    global drift
+    drift = driftsummary.drift_py()
+
     mango_prices_full = get_mango_prices()
     fida_prices_full = get_fida_prices()
-    drift_prices_full = get_drift_prices()
+    drift_prices_full = get_drift_prices(drift)
 
     drift_prices_selected = None
     rr = None
