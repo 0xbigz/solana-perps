@@ -115,7 +115,6 @@ app.layout = html.Div(
         html.Br(),
         html.Br(),
         html.Br(),
-        footer.make_footer(),
     ]
 )
 
@@ -178,7 +177,6 @@ def page_1_layout():
 
 page_2_layout = html.Div(
     [
-        html.H1("Drift Stats"),
         html.H5("Drift Summary"),
         driftsummary.make_drift_summary(),
         html.Br(),
@@ -192,6 +190,18 @@ page_3_layout = html.Div(
         mangosummary.make_pyth_summary(),
         mangosummary.make_mango_summary(),
         html.Br(),
+    ]
+)
+
+page_faq_layout = html.Div(
+    [
+        footer.make_footer(),
+    ]
+)
+
+page_resources_layout = html.Div(
+    [
+        footer.make_resources(),
     ]
 )
 
@@ -212,6 +222,10 @@ def display_page(pathname):
         return page_2_layout, {}, {"background-color": "gray", "color": "white"}, {}
     elif pathname == "/mango":
         return page_3_layout, {}, {}, {"background-color": "gray", "color": "white"}
+    elif pathname == "/faq":
+        return page_faq_layout, {}, {}, {}
+    elif pathname == "/resources":
+        return page_resources_layout, {}, {}, {}
     else:
         return (
             html.Div([html.H1("Error 404 - Page not found")]),

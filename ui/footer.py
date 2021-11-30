@@ -17,11 +17,32 @@ def make_footer() -> html.Footer:
             html.P(
                 "prices are currently `last trade`, mango's bid/ask price could be different."
             ),
+            html.H3("Where does the data come from?"),
+            html.Span(
+                [
+                    html.P(
+                        "A mix of on-chain inspection / api requests. The project is written in python and is "
+                    ),
+                    html.A(
+                        "open sourced",
+                        "https://github.com/0xbigz/solana-perps",
+                        href="https://github.com/0xbigz/solana-perps",
+                        target="_",
+                    ),
+                    html.P("feel free to submit a pull request or make a request"),
+                ]
+            ),
+            html.H3("Why make this?"),
+            html.Span("bigz likes data and wanted to share :D"),
             html.H3("When funding comparison/strategy explanation?"),
             html.P("soon (tm)"),
-            html.Br(),
-            html.Br(),
-            html.Br(),
+        ]
+    )
+
+
+def make_resources() -> html.Footer:
+    return html.Footer(
+        children=[
             html.H5("Resources"),
             html.H4("readings"),
             html.A(

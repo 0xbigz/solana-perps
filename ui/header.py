@@ -76,6 +76,18 @@ def make_header() -> html.Header:
                                 className="tab",
                                 id="tab-mango",
                             ),
+                            dcc.Link(
+                                "FAQ",
+                                href="/faq",
+                                className="tab",
+                                id="tab-faq",
+                            ),
+                            dcc.Link(
+                                "Resources",
+                                href="/resources",
+                                className="tab",
+                                id="tab-resources",
+                            ),
                         ],
                         className="row all-tabs",
                     ),
