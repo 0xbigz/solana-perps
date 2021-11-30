@@ -11,27 +11,48 @@ def make_header() -> html.Header:
         children=[
             html.A(
                 [
-                    html.Span(
+                    html.Div(
                         [
                             html.Img(
                                 src="https://pbs.twimg.com/profile_banners/1388194344390119426/1637877290/1500x500",
                                 style={
                                     "height": "50px",
                                     # "width": "4%",
-                                    "float": "left",
+                                    # "float": "left",
                                     "position": "relative",
-                                    "padding-top": 0,
+                                    "padding-bottom": 10,
+                                    "padding-bottom": 40,
                                     "padding-right": 10,
                                 },
                             ),
-                        ]
+                            html.Img(
+                                src="assets/platyperpstext.png",
+                                style={
+                                    "height": "100px",
+                                },
+                            ),
+                            html.Img(
+                                src="https://pbs.twimg.com/profile_banners/1388194344390119426/1637877290/1500x500",
+                                style={
+                                    "height": "50px",
+                                    # "width": "4%",
+                                    # "float": "left",
+                                    "position": "relative",
+                                    "padding-bottom": 10,
+                                    "padding-bottom": 40,
+                                    "padding-right": 10,
+                                    "transform": "scaleX(-1)",
+                                },
+                            ),
+                        ],
+                        style={
+                            "margin": "auto",
+                            "text-align": "center",
+                        },
                     )
                 ],
                 href="https://twitter.com/bigz_Pubkey",
             ),
-            html.H2("platyperps"),
-            html.H4("~comparing perpetual swap prices on Solana DEXs~"),
-            html.H4("(updates every 10 seconds, please be patient with loads! 🐢 )"),
             # create navigator with buttons
             html.Nav(
                 children=[
@@ -58,7 +79,10 @@ def make_header() -> html.Header:
                         ],
                         className="row all-tabs",
                     ),
-                ]
+                ],
+                style={
+                    "text-align": "center",
+                },
             ),
         ]
     )

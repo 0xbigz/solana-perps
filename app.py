@@ -123,10 +123,14 @@ app.layout = html.Div(
 def page_1_layout():
     return html.Div(
         [
-            html.H1("Protocol Compare"),
+            html.Div(
+                "last update: ... (updates every 10 seconds)", id="last-update-ts"
+            ),
+            # html.H6("(updates every 10 seconds)"),
+            # html.H1("Protocol Compare"),
             dcc.Interval(
                 id="interval-component",
-                interval=1 * 6000,
+                interval=1 * 7500,
                 n_intervals=0,  # in milliseconds
             ),
             html.H5("Overview"),
@@ -219,6 +223,7 @@ def display_page(pathname):
 
 @app.callback(
     [
+        Output("last-update-ts", "children"),
         Output("live-update-text", "children"),
         # Output("live_table", "data"),
         Output("mango_v_drift_table", "data"),
@@ -310,9 +315,7 @@ def update_metrics(n, selected_value):
             rr = [
                 html.Div(
                     "{}".format(selected_value)
-                    + " (coingecko={:.2f})".format(coingecko_card1["current_price"])
-                    + " last page update: "
-                    + maintenant.strftime("%Y/%m/%d %H:%M:%S UTC"),
+                    + " (coingecko:{:.2f})".format(coingecko_card1["current_price"]),
                 ),
                 html.Br(),
                 html.Img(
@@ -374,6 +377,34 @@ def update_metrics(n, selected_value):
                 ),
                 html.Br(),
                 html.Br(),
+                html.Img(
+                    src="assets/bonfidalogo.png",
+                    style={
+                        "height": "45px",
+                        # "width": "22%",
+                        "float": "left",
+                        "position": "relative",
+                        "padding-top": 0,
+                        "padding-right": 8,
+                    },
+                ),
+                html.A(
+                    html.Code(
+                        "Bonfida "
+                        + selected_value
+                        + ": {0:.2f}".format(fida_price_latest["markPrice"]),
+                        style=style,
+                    ),
+                    href="https://perps.bonfida.org/#/trade/" + selected_value,
+                    target="_",
+                ),
+                html.Br(),
+                html.Code(
+                    "last trade: delta={0:.4f}, time=".format(fida_price_change)
+                    + fida_last_trade
+                    + "",
+                    # style=style,
+                ),
                 # html.H4("Recent Drift Trades:"),
             ]
 
@@ -389,6 +420,14 @@ def update_metrics(n, selected_value):
     # print(mango_v_drift)
 
     return [
+        html.Span(
+            [
+                html.Code(
+                    " last update: " + maintenant.strftime("%Y/%m/%d %H:%M:%S UTC")
+                ),
+                html.H6("(updates every 10 seconds)"),
+            ]
+        ),
         rr,
         # drift_prices_selected,
         mango_v_drift.to_dict("records"),

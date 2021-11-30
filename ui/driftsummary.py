@@ -56,27 +56,12 @@ history_df = drift_history_df(drift)
 drift_market_summary = drift_market_summary_df(drift)
 
 
-def make_drift_summary() -> html.Header:
-    """
-    Returns a HTML Header element for the application Header.
-    :return: HTML Header
-    """
-    deposits = history_df["deposit"].loc["2021":]
-    d = deposits.direction[0]
-    assert "deposit" in str(d).lower()
-    deposit_ts = (
-        deposits.apply(
-            lambda x: x["amount"] * -1 if x["direction"] != d else x["amount"], axis=1
-        )
-        / 1e6
-    )
-    fig = deposit_ts.sort_index().cumsum().plot(title="recent deposits/withdraws")
-
+def make_ts():
     trdf = history_df["trade"].copy().sort_index()
     trdf["user_authority"] = trdf["user_authority"].astype(str)
-
     duration = trdf["fee"].index[-1] - trdf["fee"].index[0]
     duration = duration.seconds / 60 / 60
+    print(int(duration * 100) / 100, "hours")
 
     for x in ["fee", "quote_asset_amount"]:
         trdf[x] /= 1e6
@@ -94,12 +79,13 @@ def make_drift_summary() -> html.Header:
         .sum()
         .sort_values("fee", ascending=False)
     )
-    print(int(duration * 100) / 100, "hours")
     # calculate interpolated daily fee spend
     toshow["hourly_avg_fee"] = (toshow["fee"] / duration).round(2)
 
-    lead_trade_table = toshow.reset_index()
+    return toshow.reset_index()
 
+
+def make_funding_figs():
     frfull = history_df["fundingRate"].sort_index()
     figs = []
     for marketIndex in frfull.market_index.unique():
@@ -137,6 +123,31 @@ def make_drift_summary() -> html.Header:
         figs.append(
             dfplt.plot(title=MARKET_INDEX_TO_PERP[marketIndex] + " funding rate %")
         )
+    return figs
+
+
+def make_deposit_fig():
+    deposits = history_df["deposit"].loc["2021":]
+    d = deposits.direction[0]
+    assert "deposit" in str(d).lower()
+    deposit_ts = (
+        deposits.apply(
+            lambda x: x["amount"] * -1 if x["direction"] != d else x["amount"], axis=1
+        )
+        / 1e6
+    )
+    fig = deposit_ts.sort_index().cumsum().plot(title="recent deposits/withdraws")
+    return fig
+
+
+def make_drift_summary() -> html.Header:
+    """
+    Returns a HTML Header element for the application Header.
+    :return: HTML Header
+    """
+
+    lead_trade_table = make_ts()
+    figs = make_funding_figs()
     user_summary_df = drift.user_summary()
 
     return html.Header(
@@ -202,7 +213,7 @@ def make_drift_summary() -> html.Header:
             html.H4(
                 "Recent cumulative deposits (note: total deposits are likely greater)"
             ),
-            dcc.Graph(figure=fig),
+            dcc.Graph(figure=make_deposit_fig()),
         ]
         + [html.H4("Hourly funding rates")]
         + [dcc.Graph(figure=figX) for figX in figs]
