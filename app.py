@@ -98,6 +98,7 @@ mango_v_drift["Protocol"] = pd.Series(["Drift", "Mango", "Bonfida", "(CoinGecko)
 
 
 app = dash.Dash(__name__)
+app.title = "Platyperps | Solana Perp Platform Side-By-Side"
 server = app.server
 
 app.layout = html.Div(
@@ -188,9 +189,25 @@ def page_1_layout():
 drift = driftsummary.drift_py()
 
 
+@app.callback(
+    Output("refresh-btn-out", "children"),
+    Input("btn-nclicks-1", "n_clicks"),
+)
+def displayClick(btn1):
+    global drift
+    drift = driftsummary.drift_py()
+    print("loaded new drift")
+    return btn1
+
+
 page_2_layout = html.Div(
     [
         html.H5("Drift Summary"),
+        html.Button("refresh", id="btn-refresh-1", n_clicks=0),
+        html.Code(
+            "",
+            id="refresh-btn-out",
+        ),
         driftsummary.make_drift_summary(drift),
         html.Br(),
     ]
