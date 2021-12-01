@@ -73,14 +73,14 @@ def get_drift_prices(drift):
         #     drift_p2["data"]["trades"],
         # ]
         market_summary = driftsummary.drift_market_summary_df(drift)
-        print(market_summary)
+        # print(market_summary)
         mm = market_summary.set_index("FIELD").loc[
             ["mark_price", "last_mark_price_twap_ts"]
         ]
         mm.index = ["afterPrice", "ts"]
         # mm.columns = [0, 1, 2]
         res = mm.T.to_dict("records")
-        print(res[0])
+        # print(res[0])
         return res
     except Exception as e:
         print(e)

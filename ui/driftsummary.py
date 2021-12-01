@@ -119,6 +119,11 @@ def make_funding_figs(history_df):
             },
             axis=1,
         )
+        if (
+            dfplt["long_funding_rate"] - dfplt["short_funding_rate"]
+        ).abs().sum() <= 1e-6:
+            dfplt = dfplt.drop(["short_funding_rate", "long_funding_rate"], axis=1)
+
         dfs_to_plt[MARKET_INDEX_TO_PERP[marketIndex]] = dfplt.resample("1H").bfill()
 
     thefig = pd.concat(dfs_to_plt, axis=1)
@@ -126,14 +131,8 @@ def make_funding_figs(history_df):
     print(thefig)
     figs = [thefig.plot()]
     print(thefig)
-    funding_stats = thefig.tail(24).describe()
-    funding_stats = funding_stats[
-        [
-            "('SOL-PERP', 'balanced_funding')",
-            "('BTC-PERP', 'balanced_funding')",
-            "('ETH-PERP', 'balanced_funding')",
-        ]
-    ]
+    funding_stats = thefig.tail(24).agg(["mean", "std", "sum"])
+    funding_stats = funding_stats.round(5).reset_index()
     return (figs, funding_stats)
 
 
@@ -150,6 +149,39 @@ def make_deposit_fig(history_df):
     fig = deposit_ts.sort_index().cumsum().plot()
     return fig
 
+
+def make_curve_history_df(history_df):
+    curvedffull = history_df["curve"].copy().sort_index(ascending=False).reset_index()
+    print(curvedffull.columns)
+
+    cost_col = ["total_fee", "total_fee_minus_distributions", "adjustment_cost"]
+    peg_col = ["peg_multiplier_before", "peg_multiplier_after"]
+    k_col = ["sqrt_k_before", "sqrt_k_after"]
+    dd = curvedffull[
+        ["ts", "market_index", "open_interest"] + peg_col + k_col + cost_col
+    ]
+
+    for col in cost_col:
+        dd[col] /= 1e6
+        dd[col] = dd[col].round(2)
+
+    for col in k_col:
+        dd[col] /= 1e13
+        dd[col] = dd[col].round(5)
+
+    for col in peg_col:
+        dd[col] /= 1e3
+        dd[col] = dd[col].round(3)
+
+    return dd
+
+
+# for marketIndex in curvedffull.market_index.unique():
+#     curvedf = curvedffull[curvedffull.market_index == marketIndex]
+#     print(curvedf.columns)
+#     cdf = curvedf[['total_fee', 'total_fee_minus_distributions','adjustment_cost']]/1e6
+#     fig = cdf.plot(title=MARKET_INDEX_TO_PERP[marketIndex])
+#     fig.show()
 
 # card = dbc.Card(
 #     dbc.CardBody(
@@ -176,6 +208,7 @@ def make_drift_summary(drift) -> html.Header:
     figs = xx[0]
     funding_stats = xx[1]
     deposit_fig = make_deposit_fig(history_df)
+    curve_df = make_curve_history_df(history_df)
 
     user_summary_df = drift.user_summary()
     drift_market_summary = drift_market_summary_df(drift)
@@ -205,7 +238,7 @@ def make_drift_summary(drift) -> html.Header:
                 selected_rows=[],
                 page_action="native",
                 page_current=0,
-                page_size=8,
+                page_size=10,
                 export_format="csv",
                 # style_table={
                 #     "width": "50%",
@@ -239,6 +272,7 @@ def make_drift_summary(drift) -> html.Header:
                 export_format="csv",
             ),
             html.H4("Hourly funding rates"),
+            html.H5("24h Aggregate Funding Statistics"),
             dash_table.DataTable(
                 id="funding-data",
                 columns=[
@@ -281,6 +315,25 @@ def make_drift_summary(drift) -> html.Header:
                 page_current=0,
                 page_size=10,
                 export_format="csv",
+            ),
+            html.H4("Recent Curve History"),
+            dash_table.DataTable(
+                id="fees-data",
+                columns=[
+                    {"name": i, "id": i, "deletable": False, "selectable": True}
+                    for i in curve_df.columns
+                ],
+                data=curve_df.to_dict("records"),
+                editable=True,
+                selected_columns=[],
+                selected_rows=[],
+                page_action="native",
+                page_current=0,
+                page_size=8,
+                export_format="csv",
+                # style_table={
+                #     "width": "50%",
+                # },
             ),
             html.H4("Recent cumulative deposits (note: total deposits greater)"),
             dcc.Graph(figure=deposit_fig),
