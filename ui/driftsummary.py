@@ -133,7 +133,8 @@ def make_funding_figs(history_df):
     print(thefig)
     funding_stats = thefig.tail(24).agg(["mean", "std", "sum"])
     funding_stats = funding_stats.round(5).reset_index()
-    return (figs, funding_stats)
+    last_funding_stats = thefig.tail(1)
+    return (figs, funding_stats, last_funding_stats)
 
 
 def make_deposit_fig(history_df):
@@ -207,6 +208,7 @@ def make_drift_summary(drift) -> html.Header:
     xx = make_funding_figs(history_df)
     figs = xx[0]
     funding_stats = xx[1]
+    last_funding_stats = xx[2].reset_index()
     deposit_fig = make_deposit_fig(history_df)
     curve_df = make_curve_history_df(history_df)
 
@@ -215,10 +217,6 @@ def make_drift_summary(drift) -> html.Header:
 
     return html.Header(
         children=[
-            html.Code(
-                "last update: " + maintenant.strftime("%Y/%m/%d: %H:%M:%S") + " UTC"
-            ),
-            html.Br(),
             html.H4("Markets Summary"),
             dash_table.DataTable(
                 id="fees-data",
@@ -272,6 +270,22 @@ def make_drift_summary(drift) -> html.Header:
                 export_format="csv",
             ),
             html.H4("Hourly funding rates"),
+            html.H5("Last Funding Update"),
+            dash_table.DataTable(
+                id="last-funding-data",
+                columns=[
+                    {"name": i, "id": i, "deletable": False, "selectable": True}
+                    for i in last_funding_stats.columns
+                ],
+                data=last_funding_stats.to_dict("records"),
+                editable=True,
+                selected_columns=[],
+                selected_rows=[],
+                page_action="native",
+                page_current=0,
+                page_size=8,
+                export_format="csv",
+            ),
             html.H5("24h Aggregate Funding Statistics"),
             dash_table.DataTable(
                 id="funding-data",

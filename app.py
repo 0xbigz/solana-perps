@@ -98,7 +98,7 @@ mango_v_drift["Protocol"] = pd.Series(["Drift", "Mango", "Bonfida", "(CoinGecko)
 
 
 app = dash.Dash(__name__)
-app.title = "Platyperps | Solana Perp Platform Side-By-Side"
+app.title = "Platyperps | Solana Perp Platforms Side-By-Side"
 server = app.server
 
 app.layout = html.Div(
@@ -119,6 +119,7 @@ app.layout = html.Div(
 def page_1_layout():
     return html.Div(
         [
+            html.Br(),
             html.Div(
                 "last update: ... (updates every 10 seconds)", id="last-update-ts"
             ),
@@ -130,37 +131,53 @@ def page_1_layout():
                 n_intervals=0,  # in milliseconds
             ),
             html.H5("Overview"),
-            html.Div(
+            html.Span(
                 [
-                    dash_table.DataTable(
-                        id="mango_v_drift_table",
-                        columns=[
-                            {"name": i, "id": i, "deletable": False, "selectable": True}
-                            for i in mango_v_drift.columns
+                    html.Div(
+                        [
+                            dash_table.DataTable(
+                                id="mango_v_drift_table",
+                                columns=[
+                                    {
+                                        "name": i,
+                                        "id": i,
+                                        "deletable": False,
+                                        "selectable": True,
+                                    }
+                                    for i in mango_v_drift.columns
+                                ],
+                                style_data={
+                                    "whiteSpace": "normal",
+                                    "height": "auto",
+                                    "lineHeight": "15px",
+                                },
+                                data=mango_v_drift.to_dict("records"),
+                                # editable=True,
+                                # filter_action="native",
+                                sort_action="native",
+                                sort_mode="multi",
+                                # column_selectable="single",
+                                # row_selectable="multi",
+                                row_deletable=True,
+                                selected_columns=[],
+                                selected_rows=[],
+                                page_action="native",
+                                page_current=0,
+                                page_size=5,
+                            ),
                         ],
-                        style_data={
-                            "whiteSpace": "normal",
-                            "height": "auto",
-                            "lineHeight": "15px",
+                        style={
+                            "max-width": "500px",
+                            "margin": "auto",
                         },
-                        data=mango_v_drift.to_dict("records"),
-                        # editable=True,
-                        # filter_action="native",
-                        sort_action="native",
-                        sort_mode="multi",
-                        # column_selectable="single",
-                        # row_selectable="multi",
-                        row_deletable=True,
-                        selected_columns=[],
-                        selected_rows=[],
-                        page_action="native",
-                        page_current=0,
-                        page_size=5,
                     ),
-                ],
-                style={
-                    "max-width": "500px",
-                },
+                    # dcc.Graph(
+                    #     id="mango_v_drift_graph",
+                    #     style={
+                    #         "max-width": "500px",
+                    #     },
+                    # ),
+                ]
             ),
             html.Br(),
             html.Br(),
@@ -178,11 +195,13 @@ def page_1_layout():
                     ),
                     html.Div("loading...", id="live-update-text"),
                 ],
-                style={
-                    "max-width": "500px",
-                },
+                style={"max-width": "500px", "margin": "auto", "text-align": "left"},
             ),
-        ]
+        ],
+        style={
+            "text-align": "center",
+            "margin": "auto",
+        },
     )
 
 
@@ -190,14 +209,34 @@ drift = driftsummary.drift_py()
 
 
 @app.callback(
-    Output("refresh-btn-out", "children"),
-    Input("btn-nclicks-1", "n_clicks"),
+    [
+        Output("refresh-btn-out", "children"),
+        Output("drift-py-last-update", "children"),
+        Output("drift-summary-id", "children"),
+        Output("btn-refresh-1", "children"),
+    ],
+    Input("btn-refresh-1", "n_clicks"),
 )
 def displayClick(btn1):
     global drift
     drift = driftsummary.drift_py()
     print("loaded new drift")
-    return btn1
+
+    lastudatestr = (
+        "last update: " + drift.last_update.strftime("%Y/%m/%d: %H:%M:%S") + " UTC"
+    )
+
+    return btn1, lastudatestr, driftsummary.make_drift_summary(drift), "refresh"
+
+
+@app.callback(
+    [
+        Output("btn-refresh-1", "disable"),
+    ],
+    Input("btn-refresh-1", "n_clicks"),
+)
+def displayClickLoading(btn1):
+    return [True]
 
 
 page_2_layout = html.Div(
@@ -208,7 +247,12 @@ page_2_layout = html.Div(
             "",
             id="refresh-btn-out",
         ),
-        driftsummary.make_drift_summary(drift),
+        html.Code(
+            "last update: " + drift.last_update.strftime("%Y/%m/%d: %H:%M:%S") + " UTC",
+            id="drift-py-last-update",
+        ),
+        html.Br(),
+        html.Div("loading...", id="drift-summary-id"),
         html.Br(),
     ]
 )
@@ -271,6 +315,7 @@ def display_page(pathname):
         Output("live-update-text", "children"),
         # Output("live_table", "data"),
         Output("mango_v_drift_table", "data"),
+        # Output("mango_v_drift_graph", "figure"),
     ],
     [
         Input("interval-component", "n_intervals"),
@@ -482,6 +527,7 @@ def update_metrics(n, selected_value):
         rr,
         # drift_prices_selected,
         mango_v_drift.to_dict("records"),
+        # pd.DataFrame(mango_prices_full).plot(),
     ]
 
 
