@@ -93,9 +93,13 @@ mango_v_drift = pd.DataFrame(
 )
 mango_v_drift["Protocol"] = pd.Series(["Drift", "Mango", "Bonfida", "(CoinGecko)"])
 
+
+mango_v_drift_by_asset = html.Div("loading...")
+
 # image_filename = os.getcwd() + "/logo_drift.png"  # replace with your own image
 # encoded_image = base64.b64encode(open(image_filename, "rb").read())
 
+platyperps_last_update_1 = html.Div()
 
 app = dash.Dash(__name__)
 app.title = "Platyperps | Solana Perp Platforms Side-By-Side"
@@ -120,9 +124,7 @@ def page_1_layout():
     return html.Div(
         [
             html.Br(),
-            html.Div(
-                "last update: ... (updates every 10 seconds)", id="last-update-ts"
-            ),
+            html.Div(platyperps_last_update_1, id="last-update-ts"),
             # html.H6("(updates every 10 seconds)"),
             # html.H1("Protocol Compare"),
             dcc.Interval(
@@ -193,7 +195,7 @@ def page_1_layout():
                         ],
                         value="SOL-PERP",
                     ),
-                    html.Div("loading...", id="live-update-text"),
+                    html.Div(mango_v_drift_by_asset, id="live-update-text"),
                 ],
                 style={"max-width": "500px", "margin": "auto", "text-align": "left"},
             ),
@@ -218,15 +220,18 @@ drift = driftsummary.drift_py()
     Input("btn-refresh-1", "n_clicks"),
 )
 def displayClick(btn1):
-    global drift
-    drift = driftsummary.drift_py()
+    newdrift = driftsummary.drift_py()
     print("loaded new drift")
 
     lastudatestr = (
-        "last update: " + drift.last_update.strftime("%Y/%m/%d: %H:%M:%S") + " UTC"
+        "last update: " + newdrift.last_update.strftime("%Y/%m/%d: %H:%M:%S") + " UTC"
     )
+    summary_html = driftsummary.make_drift_summary(newdrift)
 
-    return btn1, lastudatestr, driftsummary.make_drift_summary(drift), "refresh"
+    global drift
+    drift = newdrift
+
+    return btn1, lastudatestr, summary_html, "refresh"
 
 
 @app.callback(
@@ -242,7 +247,11 @@ def displayClickLoading(btn1):
 page_2_layout = html.Div(
     [
         html.H5("Drift Summary"),
-        html.Button("refresh", id="btn-refresh-1", n_clicks=0),
+        html.Button(
+            "refresh",
+            id="btn-refresh-1",
+            n_clicks=0,
+        ),
         html.Code(
             "",
             id="refresh-btn-out",
@@ -252,7 +261,11 @@ page_2_layout = html.Div(
             id="drift-py-last-update",
         ),
         html.Br(),
-        html.Div("loading...", id="drift-summary-id"),
+        dcc.Loading(
+            id="loading-2",
+            children=[html.Div("loading...", id="drift-summary-id")],
+            type="circle",
+        ),
         html.Br(),
     ]
 )
@@ -375,21 +388,21 @@ def update_metrics(n, selected_value):
         )
 
         drift_sol_card = (
-            "{:.2f}".format(drift_price_latest)
+            "${:.2f}".format(drift_price_latest)
             # + "\n (last trade: "
             # + drift_last_trade
             # + ")"
         )
 
         mango_sol_card = (
-            "{:.2f}".format(mango_price_latest["price"])
+            "${:.2f}".format(mango_price_latest["price"])
             # + "\n (last trade: "
             # + mango_last_trade
             # + ")"
         )
 
         fida_sol_card = (
-            "{:.2f}".format(fida_price_latest["markPrice"])
+            "${:.2f}".format(fida_price_latest["markPrice"])
             # + "\n (last trade: "
             # + drift_last_trade
             # + ")"
@@ -407,10 +420,11 @@ def update_metrics(n, selected_value):
         ]
 
         if val in selected_value:
-            rr = [
+            global mango_v_drift_by_asset
+            mango_v_drift_by_asset = [
                 html.Div(
                     "{}".format(selected_value)
-                    + " (coingecko:{:.2f})".format(coingecko_card1["current_price"]),
+                    + " (coingecko: ${:.2f})".format(coingecko_card1["current_price"]),
                 ),
                 html.Br(),
                 html.Img(
@@ -506,6 +520,7 @@ def update_metrics(n, selected_value):
 
             drift_prices_selected = drift_prices
 
+    global mango_v_drift
     mango_v_drift = pd.DataFrame(
         dds,
         index=["Drift", "Mango", "Bonfida", "(CoinGecko)"],
@@ -515,16 +530,22 @@ def update_metrics(n, selected_value):
     mango_v_drift = mango_v_drift.reset_index()
     # print(mango_v_drift)
 
+    global platyperps_last_update_1
+    platyperps_last_update_1 = html.Span(
+        [
+            html.Code(
+                [
+                    " last update: " + maintenant.strftime("%Y/%m/%d %H:%M:%S"),
+                ],
+                style={"display": "inline"},
+            ),
+            html.H6("(updates every 10 seconds)", style={"display": "inline"}),
+        ]
+    )
+
     return [
-        html.Span(
-            [
-                html.Code(
-                    " last update: " + maintenant.strftime("%Y/%m/%d %H:%M:%S UTC")
-                ),
-                html.H6("(updates every 10 seconds)"),
-            ]
-        ),
-        rr,
+        platyperps_last_update_1,
+        mango_v_drift_by_asset,
         # drift_prices_selected,
         mango_v_drift.to_dict("records"),
         # pd.DataFrame(mango_prices_full).plot(),
