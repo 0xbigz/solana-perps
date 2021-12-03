@@ -67,13 +67,13 @@ def make_header() -> html.Header:
                                 id="tab-compare",
                             ),
                             dcc.Link(
-                                "Drift",
+                                "Drift 👾",
                                 href="/drift",
                                 className="tab",
                                 id="tab-drift",
                             ),
                             dcc.Link(
-                                "Mango",
+                                "Mango 🥭",
                                 href="/mango",
                                 className="tab",
                                 id="tab-mango",

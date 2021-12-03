@@ -173,14 +173,66 @@ def make_funding_table():
         funding_rate_df[col] = funding_rate_df[col].map("{:,.5f}%".format)
 
     funding_rate_df = funding_rate_df.reset_index()
+    print(funding_rate_df.iloc[:, 1:])
 
-    # print(funding_rate_df)
-    return funding_rate_df
+    # make volume table too
+    bonfida_markets = {
+        "BTC": "475P8ZX3NrzyEMJSFHt9KCMjPpWBWGa6oNxkWcwww2BR",
+        "SOL": "jeVdn6rxFPLpCH9E6jmk39NTNx2zgTmKiVXBDiApXaV",
+        "ETH": "3ds9ZtmQfHED17tXShfC1xEsZcfCvmT8huNG79wa4MHg",
+    }
+
+    mango_markets = {
+        "BTC": "DtEcjPLyD4YtTBB4q8xwFZ9q49W89xZCZtJyrGebi5t8",
+        "SOL": "2TgaaVoHgnSeEtXvWTx13zQeTf4hYWAMEiMQdcG6EwHi",
+        "ETH": "DVXWg6mfwFvHQbGyaHke4h3LE9pSkgbooDSDgA4JBC8d",
+    }
+
+    drift_markets = {"BTC": "1", "SOL": "0", "ETH": "2"}
+
+    fida_volume = [
+        requests.get(
+            "https://serum-api.bonfida.com/perps/volume?market=%s" % bonfida_markets[x]
+        ).json()["data"]["volume"]
+        for x in ("SOL", "BTC", "ETH")
+    ]
+    mango_volume = [
+        requests.get(
+            "https://event-history-api.herokuapp.com/stats/perps/%s" % mango_markets[x]
+        ).json()["data"]["volume"]
+        for x in ("SOL", "BTC", "ETH")
+    ]
+    drift_volume = [
+        requests.get(
+            "https://mainnet-beta.history.drift.trade/stats/24HourVolume?marketIndex=%s"
+            % drift_markets[x]
+        ).json()["data"]["volume"]
+        for x in ("SOL", "BTC", "ETH")
+    ]
+    ftx_volume = [z["result"]["volume"] for z in ftx_funds]
+
+    volumes = pd.DataFrame(
+        [ftx_volume, mango_volume, drift_volume, fida_volume],
+        index=[
+            "(FTX)",
+            "Mango",
+            "Drift",
+            "Bonfida",
+        ],
+    )
+    volumes.iloc[[0], :] *= np.array([[220, 55000, 4400]])  # todo lol
+    for col in volumes.columns:
+        volumes[col] = volumes[col].astype(float).map("${:,.0f}".format)
+    volumes = volumes.reset_index()
+    volumes.columns = ["Protocol", "SOL", "BTC", "ETH"]
+    # volumes
+
+    return funding_rate_df, volumes
 
 
 drift = driftsummary.drift_py()
 
-funding_table = make_funding_table()
+funding_table, volume_table = make_funding_table()
 
 
 def page_1_layout():
@@ -267,21 +319,6 @@ def page_1_layout():
                             "height": "auto",
                             "lineHeight": "15px",
                         },
-                        style_data_conditional=[
-                            {
-                                "if": {
-                                    "filter_query": "{{SOL}} = {}".format(
-                                        funding_table["SOL"]
-                                        .str.rstrip("%")
-                                        .astype("float")
-                                        .max()
-                                    ),
-                                    "column_id": "SOL",
-                                },
-                                "backgroundColor": "#FF4136",
-                                "color": "white",
-                            },
-                        ],
                         data=funding_table.to_dict("records"),
                         # editable=True,
                         # filter_action="native",
@@ -303,6 +340,45 @@ def page_1_layout():
                 },
             ),
             html.Br(),
+            html.H6("24h Volume"),
+            html.Div(
+                [
+                    dash_table.DataTable(
+                        id="volume_table",
+                        columns=[
+                            {
+                                "name": i,
+                                "id": i,
+                                "deletable": False,
+                                "selectable": True,
+                            }
+                            for i in volume_table.columns
+                        ],
+                        style_data={
+                            "whiteSpace": "normal",
+                            "height": "auto",
+                            "lineHeight": "15px",
+                        },
+                        data=volume_table.to_dict("records"),
+                        # editable=True,
+                        # filter_action="native",
+                        sort_action="native",
+                        sort_mode="multi",
+                        # column_selectable="single",
+                        # row_selectable="multi",
+                        row_deletable=True,
+                        selected_columns=[],
+                        selected_rows=[],
+                        page_action="native",
+                        page_current=0,
+                        page_size=5,
+                    ),
+                ],
+                style={
+                    "max-width": "500px",
+                    "margin": "auto",
+                },
+            ),
             html.Br(),
             html.H5("Details By Asset"),
             html.Div(
@@ -380,12 +456,12 @@ page_2_layout = html.Div(
         html.Br(),
         html.A(
             "Insurance Fund",
-            href="https://solscan.io/account/Bzjkrm1bFwVXUaV9HTnwxFrPtNso7dnwPQamhqSxtuhZ",
+            href="https://solscan.io/account/Bzjkrm1bFwVXUaV9HTnwxFrPtNso7dnwPQamhqSxtuhZ#splTransfer",
         ),
         " | ",
         html.A(
             " Collateral Vault",
-            href="https://solscan.io/account/6W9yiHDCW9EpropkFV8R3rPiL8LVWUHSiys3YeW6AT6S",
+            href="https://solscan.io/account/6W9yiHDCW9EpropkFV8R3rPiL8LVWUHSiys3YeW6AT6S#splTransfer",
         ),
         html.Br(),
         dcc.Loading(
@@ -456,6 +532,7 @@ def display_page(pathname):
         # Output("live_table", "data"),
         Output("mango_v_drift_table", "data"),
         Output("funding_table", "data"),
+        Output("volume_table", "data"),
         # Output("mango_v_drift_graph", "figure"),
     ],
     [
@@ -654,8 +731,12 @@ def update_metrics(n, selected_value):
         index=["Drift", "Mango", "Bonfida", "(CoinGecko)"],
     )
 
+    f, v = make_funding_table()
     global funding_table
-    funding_table = make_funding_table()
+    funding_table = f
+
+    global volume_table
+    volume_table = v
 
     mango_v_drift.index.name = "Protocol"
     mango_v_drift = mango_v_drift.reset_index()
@@ -682,6 +763,7 @@ def update_metrics(n, selected_value):
         # drift_prices_selected,
         mango_v_drift.to_dict("records"),
         funding_table.to_dict("records"),
+        volume_table.to_dict("records"),
         # pd.DataFrame(mango_prices_full).plot(),
     ]
 

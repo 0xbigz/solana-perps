@@ -215,6 +215,34 @@ def make_drift_summary(drift) -> html.Header:
     user_summary_df = drift.user_summary()
     drift_market_summary = drift_market_summary_df(drift)
 
+    drift_m_sum = drift.market_summary().T
+    fee_pool_balance = (
+        drift_m_sum["total_fee_minus_distributions"] - drift_m_sum["total_fee"] / 2
+    )
+    drift_fund_rate = (
+        (drift_m_sum["last_mark_price_twap"] - drift_m_sum["last_oracle_price_twap"])
+    ) / 24
+    # drift_fund_rate_pct = drift_fund_rate  / drift_m_sum['last_oracle_price_twap']
+    est_fee_pool_funding_revenue = drift_m_sum["base_asset_amount"] * drift_fund_rate
+    fee_pool_df = pd.concat(
+        {
+            "fee_pool": fee_pool_balance,
+            "next_est_funding_revenue": est_fee_pool_funding_revenue,
+            "last_ts": drift_m_sum["last_mark_price_twap_ts"],
+        },
+        axis=1,
+    ).T.reset_index()
+    fee_pool_df.columns = ["FIELD", "SOL", "BTC", "ETH"]
+    fee_pool_df = fee_pool_df.round(2)
+
+    est_next_funding = (
+        (
+            drift_market_summary.set_index("FIELD").T["last_mark_price_twap"]
+            - drift_market_summary.set_index("FIELD").T["last_oracle_price_twap"]
+        )
+        / drift_market_summary.set_index("FIELD").T["last_oracle_price_twap"]
+    ) / 24
+
     return html.Header(
         children=[
             html.H4("Markets Summary"),
@@ -225,22 +253,28 @@ def make_drift_summary(drift) -> html.Header:
                     for i in drift_market_summary.columns
                 ],
                 data=drift_market_summary.to_dict("records"),
-                editable=True,
-                # filter_action="native",
-                # sort_action="native",
-                # sort_mode="multi",
-                # column_selectable="single",
-                # row_selectable="multi",
-                # row_deletable=True,
+                editable=False,
                 selected_columns=[],
                 selected_rows=[],
                 page_action="native",
                 page_current=0,
                 page_size=10,
                 export_format="csv",
-                # style_table={
-                #     "width": "50%",
-                # },
+            ),
+            dash_table.DataTable(
+                id="fee-pool",
+                columns=[
+                    {"name": i, "id": i, "deletable": False, "selectable": True}
+                    for i in fee_pool_df.columns
+                ],
+                data=fee_pool_df.to_dict("records"),
+                editable=False,
+                selected_columns=[],
+                selected_rows=[],
+                page_action="native",
+                page_current=0,
+                page_size=10,
+                export_format="csv",
             ),
             html.H4("Recent Trader Volume Summary"),
             dash_table.DataTable(
@@ -287,6 +321,7 @@ def make_drift_summary(drift) -> html.Header:
                 export_format="csv",
             ),
             html.H5("24h Aggregate Funding Statistics"),
+            pd.DataFrame(est_next_funding).to_html(),
             dash_table.DataTable(
                 id="funding-data",
                 columns=[
