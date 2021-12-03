@@ -23,10 +23,15 @@ import mango
 import os
 import time
 import dash
-import mango
 import threading
 
-context = mango.ContextBuilder.build(cluster_name="mainnet")
+
+def mango_py():
+    context = mango.ContextBuilder.build(cluster_name="mainnet")
+    return context
+
+
+context = mango_py()
 
 
 def stream_pyth(market="SOL/USDC"):
@@ -102,6 +107,10 @@ def make_pyth_summary() -> html.Header:
                         ]
                     ),
                     html.Br(),
+                    html.H5("Funding Rates"),
+                    html.H6(
+                        "note: averaging long and short funding and excluding socialized loss"
+                    ),
                     html.Code(z.rate),
                 ]
             ),

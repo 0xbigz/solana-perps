@@ -5,15 +5,23 @@ import dash_core_components as dcc
 import dash_html_components as html
 import pandas as pd
 import numpy as np
+import sys
+
+# pd.options.display.float_format = "${:.5f}".format
 
 from ui import header, footer, driftsummary, mangosummary
 
 import requests
 import datetime
 
-df = pd.read_csv(
-    "https://raw.githubusercontent.com/plotly/datasets/master/gapminder2007.csv"
-)
+
+sys.path.append("mango-explorer/")
+import decimal
+import mango
+
+# df = pd.read_csv(
+#     "https://raw.githubusercontent.com/plotly/datasets/master/gapminder2007.csv"
+# )
 
 fees = pd.read_excel("sol-spl-fees.xlsx")
 
@@ -119,8 +127,64 @@ app.layout = html.Div(
     ]
 )
 
+context = mangosummary.mango_py()
+
+
+def make_funding_table():
+    # import requests
+    def load_mango_data(market="SOL-PERP"):
+        # Find the addresses associated with the Perp market
+        perp_stub = context.market_lookup.find_by_symbol("perp:" + market)
+        # Load the rest of the on-chain metadata of the market
+        perp_market = mango.ensure_market_loaded(context, perp_stub)
+        # z = perp_market.fetch_funding(context)
+        return perp_market
+
+    mfund_sol, mfund_btc, mfund_eth = (
+        load_mango_data("SOL-PERP"),
+        load_mango_data("BTC-PERP"),
+        load_mango_data("ETH-PERP"),
+    )
+    mango_fund_rate = [
+        float(mfund.fetch_funding(context).rate)
+        for mfund in [mfund_sol, mfund_btc, mfund_eth]
+    ]
+
+    ftx_funds = [
+        requests.get("https://ftx.com/api/futures/%s-PERP/stats" % x).json()
+        for x in ("SOL", "BTC", "ETH")
+    ]
+    ftx_fund_rate = [z["result"]["nextFundingRate"] for z in ftx_funds]
+
+    drift_m_sum = drift.market_summary().T
+    drift_fund_rate = (
+        (drift_m_sum["last_mark_price_twap"] - drift_m_sum["last_oracle_price_twap"])
+        / drift_m_sum["last_oracle_price_twap"]
+    ) / 24
+
+    funding_rate_df = pd.concat(
+        [pd.Series(ftx_fund_rate), pd.Series(mango_fund_rate), drift_fund_rate], axis=1
+    ).T
+    funding_rate_df.index = ["FTX", "Mango", "Drift"]
+    funding_rate_df.index.name = "Protocol"
+    funding_rate_df.columns = ["SOL", "BTC", "ETH"]
+    funding_rate_df = funding_rate_df * 100
+    for col in funding_rate_df.columns:
+        funding_rate_df[col] = funding_rate_df[col].map("{:,.5f}%".format)
+
+    funding_rate_df = funding_rate_df.reset_index()
+
+    # print(funding_rate_df)
+    return funding_rate_df
+
+
+drift = driftsummary.drift_py()
+
+funding_table = make_funding_table()
+
 
 def page_1_layout():
+
     return html.Div(
         [
             html.Br(),
@@ -133,6 +197,7 @@ def page_1_layout():
                 n_intervals=0,  # in milliseconds
             ),
             html.H5("Overview"),
+            html.H6("Price"),
             html.Span(
                 [
                     html.Div(
@@ -171,6 +236,7 @@ def page_1_layout():
                         style={
                             "max-width": "500px",
                             "margin": "auto",
+                            # "display": "inline",
                         },
                     ),
                     # dcc.Graph(
@@ -182,9 +248,63 @@ def page_1_layout():
                 ]
             ),
             html.Br(),
+            html.H6("1h Funding Rates"),
+            html.Div(
+                [
+                    dash_table.DataTable(
+                        id="funding_table",
+                        columns=[
+                            {
+                                "name": i,
+                                "id": i,
+                                "deletable": False,
+                                "selectable": True,
+                            }
+                            for i in funding_table.columns
+                        ],
+                        style_data={
+                            "whiteSpace": "normal",
+                            "height": "auto",
+                            "lineHeight": "15px",
+                        },
+                        style_data_conditional=[
+                            {
+                                "if": {
+                                    "filter_query": "{{SOL}} = {}".format(
+                                        funding_table["SOL"]
+                                        .str.rstrip("%")
+                                        .astype("float")
+                                        .max()
+                                    ),
+                                    "column_id": "SOL",
+                                },
+                                "backgroundColor": "#FF4136",
+                                "color": "white",
+                            },
+                        ],
+                        data=funding_table.to_dict("records"),
+                        # editable=True,
+                        # filter_action="native",
+                        sort_action="native",
+                        sort_mode="multi",
+                        # column_selectable="single",
+                        # row_selectable="multi",
+                        row_deletable=True,
+                        selected_columns=[],
+                        selected_rows=[],
+                        page_action="native",
+                        page_current=0,
+                        page_size=5,
+                    ),
+                ],
+                style={
+                    "max-width": "500px",
+                    "margin": "auto",
+                },
+            ),
             html.Br(),
             html.Br(),
-            html.H5("Price By Asset"),
+            html.H5("Details By Asset"),
             html.Div(
                 [
                     dcc.Dropdown(
@@ -205,9 +325,6 @@ def page_1_layout():
             "margin": "auto",
         },
     )
-
-
-drift = driftsummary.drift_py()
 
 
 @app.callback(
@@ -259,6 +376,16 @@ page_2_layout = html.Div(
         html.Code(
             "last update: " + drift.last_update.strftime("%Y/%m/%d: %H:%M:%S") + " UTC",
             id="drift-py-last-update",
+        ),
+        html.Br(),
+        html.A(
+            "Insurance Fund",
+            href="https://solscan.io/account/Bzjkrm1bFwVXUaV9HTnwxFrPtNso7dnwPQamhqSxtuhZ",
+        ),
+        " | ",
+        html.A(
+            " Collateral Vault",
+            href="https://solscan.io/account/6W9yiHDCW9EpropkFV8R3rPiL8LVWUHSiys3YeW6AT6S",
         ),
         html.Br(),
         dcc.Loading(
@@ -328,6 +455,7 @@ def display_page(pathname):
         Output("live-update-text", "children"),
         # Output("live_table", "data"),
         Output("mango_v_drift_table", "data"),
+        Output("funding_table", "data"),
         # Output("mango_v_drift_graph", "figure"),
     ],
     [
@@ -526,6 +654,9 @@ def update_metrics(n, selected_value):
         index=["Drift", "Mango", "Bonfida", "(CoinGecko)"],
     )
 
+    global funding_table
+    funding_table = make_funding_table()
+
     mango_v_drift.index.name = "Protocol"
     mango_v_drift = mango_v_drift.reset_index()
     # print(mango_v_drift)
@@ -535,11 +666,13 @@ def update_metrics(n, selected_value):
         [
             html.Code(
                 [
-                    " last update: " + maintenant.strftime("%Y/%m/%d %H:%M:%S"),
+                    " last update: "
+                    + maintenant.strftime("%Y/%m/%d %H:%M:%S")
+                    + " UTC ",
                 ],
                 style={"display": "inline"},
             ),
-            html.H6("(updates every 10 seconds)", style={"display": "inline"}),
+            html.H6(" (updates every 10 seconds)", style={"display": "inline"}),
         ]
     )
 
@@ -548,6 +681,7 @@ def update_metrics(n, selected_value):
         mango_v_drift_by_asset,
         # drift_prices_selected,
         mango_v_drift.to_dict("records"),
+        funding_table.to_dict("records"),
         # pd.DataFrame(mango_prices_full).plot(),
     ]
 
