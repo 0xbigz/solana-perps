@@ -149,11 +149,22 @@ def make_funding_table():
         float(mfund.fetch_funding(context).rate)
         for mfund in [mfund_sol, mfund_btc, mfund_eth]
     ]
+    try:
+        ftx_funds = [
+            requests.get("https://ftx.com/api/futures/%s-PERP/stats" % x).json()
+            for x in ("SOL", "BTC", "ETH")
+        ]
+    except:
+        ftx_funds = {
+            "success": False,
+            "result": {
+                "volume": np.nan,
+                "nextFundingRate": np.nan,
+                "nextFundingTime": "2021-12-03T21:00:00+00:00",
+                "openInterest": np.nan,
+            },
+        }
 
-    ftx_funds = [
-        requests.get("https://ftx.com/api/futures/%s-PERP/stats" % x).json()
-        for x in ("SOL", "BTC", "ETH")
-    ]
     ftx_fund_rate = [z["result"]["nextFundingRate"] for z in ftx_funds]
 
     drift_m_sum = drift.market_summary().T
@@ -173,7 +184,6 @@ def make_funding_table():
         funding_rate_df[col] = funding_rate_df[col].map("{:,.5f}%".format)
 
     funding_rate_df = funding_rate_df.reset_index()
-    print(funding_rate_df.iloc[:, 1:])
 
     # make volume table too
     bonfida_markets = {
@@ -190,25 +200,39 @@ def make_funding_table():
 
     drift_markets = {"BTC": "1", "SOL": "0", "ETH": "2"}
 
-    fida_volume = [
-        requests.get(
-            "https://serum-api.bonfida.com/perps/volume?market=%s" % bonfida_markets[x]
-        ).json()["data"]["volume"]
-        for x in ("SOL", "BTC", "ETH")
-    ]
-    mango_volume = [
-        requests.get(
-            "https://event-history-api.herokuapp.com/stats/perps/%s" % mango_markets[x]
-        ).json()["data"]["volume"]
-        for x in ("SOL", "BTC", "ETH")
-    ]
-    drift_volume = [
-        requests.get(
-            "https://mainnet-beta.history.drift.trade/stats/24HourVolume?marketIndex=%s"
-            % drift_markets[x]
-        ).json()["data"]["volume"]
-        for x in ("SOL", "BTC", "ETH")
-    ]
+    try:
+        fida_volume = [
+            requests.get(
+                "https://serum-api.bonfida.com/perps/volume?market=%s"
+                % bonfida_markets[x]
+            ).json()["data"]["volume"]
+            for x in ("SOL", "BTC", "ETH")
+        ]
+    except:
+        fida_volume = [np.nan] * 3
+
+    try:
+        mango_volume = [
+            requests.get(
+                "https://event-history-api.herokuapp.com/stats/perps/%s"
+                % mango_markets[x]
+            ).json()["data"]["volume"]
+            for x in ("SOL", "BTC", "ETH")
+        ]
+    except:
+        mango_volume = [np.nan] * 3
+
+    try:
+        drift_volume = [
+            requests.get(
+                "https://mainnet-beta.history.drift.trade/stats/24HourVolume?marketIndex=%s"
+                % drift_markets[x]
+            ).json()["data"]["volume"]
+            for x in ("SOL", "BTC", "ETH")
+        ]
+    except:
+        drift_volume = [np.nan] * 3
+
     ftx_volume = [z["result"]["volume"] for z in ftx_funds]
 
     volumes = pd.DataFrame(
@@ -245,7 +269,7 @@ def page_1_layout():
             # html.H1("Protocol Compare"),
             dcc.Interval(
                 id="interval-component",
-                interval=1 * 7500,
+                interval=1 * 15000,
                 n_intervals=0,  # in milliseconds
             ),
             html.H5("Overview"),
@@ -753,7 +777,7 @@ def update_metrics(n, selected_value):
                 ],
                 style={"display": "inline"},
             ),
-            html.H6(" (updates every 10 seconds)", style={"display": "inline"}),
+            html.H6(" (updates every 15 seconds)", style={"display": "inline"}),
         ]
     )
 
