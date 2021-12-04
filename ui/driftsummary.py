@@ -321,7 +321,7 @@ def make_drift_summary(drift) -> html.Header:
                 export_format="csv",
             ),
             html.H5("24h Aggregate Funding Statistics"),
-            pd.DataFrame(est_next_funding).to_html(),
+            # pd.DataFrame(est_next_funding).to_html(),
             dash_table.DataTable(
                 id="funding-data",
                 columns=[
