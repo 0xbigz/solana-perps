@@ -45,7 +45,7 @@ def drift_market_summary_df(drift):
         .reset_index()
         .round(4)
     )
-    drift_market_summary.columns = ["FIELD", "SOL-PERP", "BTC-PERP", "ETH-PERP"]
+    drift_market_summary.columns = ["FIELD", "SOL-PERP", "BTC-PERP", "ETH-PERP", "LUNA-PERP"]
     return drift_market_summary
 
 
@@ -58,7 +58,7 @@ def make_ts(history_df):
     trdf["user_authority"] = trdf["user_authority"].astype(str)
     duration = trdf["fee"].index[-1] - trdf["fee"].index[0]
     duration = duration.seconds / 60 / 60
-    print(int(duration * 100) / 100, "hours")
+    # print(int(duration * 100) / 100, "hours")
 
     for x in ["fee", "quote_asset_amount"]:
         trdf[x] /= 1e6
@@ -128,9 +128,7 @@ def make_funding_figs(history_df):
 
     thefig = pd.concat(dfs_to_plt, axis=1)
     thefig.columns = [str(x) for x in thefig.columns]
-    print(thefig)
     figs = [thefig.plot()]
-    print(thefig)
     funding_stats = thefig.tail(24).agg(["mean", "std", "sum"])
     funding_stats = funding_stats.round(5).reset_index()
     last_funding_stats = thefig.tail(1)
@@ -232,7 +230,7 @@ def make_drift_summary(drift) -> html.Header:
         },
         axis=1,
     ).T.reset_index()
-    fee_pool_df.columns = ["FIELD", "SOL", "BTC", "ETH"]
+    fee_pool_df.columns = ["FIELD"]+["SOL", "BTC", "ETH", "LUNA"]
     fee_pool_df = fee_pool_df.round(2)
 
     est_next_funding = (

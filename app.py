@@ -178,7 +178,7 @@ def make_funding_table():
     ).T
     funding_rate_df.index = ["FTX", "Mango", "Drift"]
     funding_rate_df.index.name = "Protocol"
-    funding_rate_df.columns = ["SOL", "BTC", "ETH"]
+    funding_rate_df.columns = ["SOL", "BTC", "ETH", "LUNA"]
     funding_rate_df = funding_rate_df * 100
     for col in funding_rate_df.columns:
         funding_rate_df[col] = funding_rate_df[col].map("{:,.5f}%".format)
