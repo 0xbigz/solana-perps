@@ -217,8 +217,8 @@ requests.get("https://ftx.com/api/futures/%s-PERP" % x).json()
         "ETH": "DVXWg6mfwFvHQbGyaHke4h3LE9pSkgbooDSDgA4JBC8d",
     }
 
-    drift_markets = {"BTC": "1", "SOL": "0", "ETH": "2"}
-
+    drift_markets = {v: str(k) for k,v in driftsummary.MARKET_INDEX_TO_PERP.items()}
+    print(drift_markets)
     try:
         fida_volume = [
             requests.get(
@@ -245,12 +245,12 @@ requests.get("https://ftx.com/api/futures/%s-PERP" % x).json()
         drift_volume = [
             requests.get(
                 "https://mainnet-beta.history.drift.trade/stats/24HourVolume?marketIndex=%s"
-                % drift_markets[x]
+                % drift_markets[x+'-PERP']
             ).json()["data"]["volume"]
-            for x in ("SOL", "BTC", "ETH")
+            for x in ("SOL", "BTC", "ETH", "LUNA", "AVAX")
         ]
     except:
-        drift_volume = [np.nan] * 3
+        drift_volume = [np.nan] * 5
 
     ftx_volume = [z["result"]["volume"] for z in ftx_funds]
 
@@ -263,7 +263,7 @@ requests.get("https://ftx.com/api/futures/%s-PERP" % x).json()
             "Bonfida",
         ],
     )
-    volumes.iloc[[0], :] *= np.array([[220, 55000, 4400, 70, 84]])  # todo lol
+    volumes.iloc[[0], :] *= np.array([[180, 48000, 4100, 66, 84]])  # todo lol
     for col in volumes.columns:
         volumes[col] = volumes[col].astype(float).map("${:,.0f}".format)
     volumes = volumes.reset_index()
@@ -771,8 +771,8 @@ def update_metrics(n, selected_value):
     global mango_v_drift
     mango_v_drift = pd.DataFrame(
         dds,
-        index=["Drift", "Mango", "Bonfida", "(CoinGecko)"],
-    )
+        index=pd.Index(["Drift", "Mango", "Bonfida", "(CoinGecko)"], name='Protocol'),
+    ).reset_index()
 
     f, v = make_funding_table()
     global funding_table
@@ -780,10 +780,6 @@ def update_metrics(n, selected_value):
 
     global volume_table
     volume_table = v
-
-    mango_v_drift.index.name = "Protocol"
-    mango_v_drift = mango_v_drift.reset_index()
-    # print(mango_v_drift)
 
     global platyperps_last_update_1
     platyperps_last_update_1 = html.Span(
