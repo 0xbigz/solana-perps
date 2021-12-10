@@ -45,7 +45,7 @@ def drift_market_summary_df(drift):
         .reset_index()
         .round(4)
     )
-    drift_market_summary.columns = ["FIELD", "SOL-PERP", "BTC-PERP", "ETH-PERP", "LUNA-PERP"]
+    drift_market_summary.columns = ["FIELD"]+list(MARKET_INDEX_TO_PERP.values())
     return drift_market_summary
 
 
@@ -230,7 +230,8 @@ def make_drift_summary(drift) -> html.Header:
         },
         axis=1,
     ).T.reset_index()
-    fee_pool_df.columns = ["FIELD"]+["SOL", "BTC", "ETH", "LUNA"]
+    fee_pool_df.columns = ["FIELD"]+list(MARKET_INDEX_TO_PERP.values())
+
     fee_pool_df = fee_pool_df.round(2)
 
     est_next_funding = (

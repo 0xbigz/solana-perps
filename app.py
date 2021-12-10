@@ -131,6 +131,8 @@ context = mangosummary.mango_py()
 
 
 def make_funding_table():
+
+    ASSETS = ("SOL", "BTC", "ETH", "LUNA", "AVAX")
     # import requests
     def load_mango_data(market="SOL-PERP"):
         # Find the addresses associated with the Perp market
@@ -152,10 +154,16 @@ def make_funding_table():
     try:
         ftx_funds = [
             requests.get("https://ftx.com/api/futures/%s-PERP/stats" % x).json()
-            for x in ("SOL", "BTC", "ETH")
+            for x in ASSETS
+        ]
+
+        ftx_px = [
+requests.get("https://ftx.com/api/futures/%s-PERP" % x).json()
+            for x in ASSETS
+
         ]
     except:
-        ftx_funds = {
+        ftx_funds = [{
             "success": False,
             "result": {
                 "volume": np.nan,
@@ -163,10 +171,21 @@ def make_funding_table():
                 "nextFundingTime": "2021-12-03T21:00:00+00:00",
                 "openInterest": np.nan,
             },
-        }
+        }]*len(ASSETS)
+
+        ftx_px = [{"success":False,
+        "result":{"name":"AVAX-PERP","underlying":np.nan, "description":"Avalanche Perpetual Futures",
+        "type":"perpetual","expiry":True,"perpetual":True,"expired":False,"enabled":False,
+        "postOnly":False,"priceIncrement":0.001,"sizeIncrement":0.1,"last":84.491,"bid":84.498,
+        "ask":84.531,"index":np.nan,"mark":np.nan,"imfFactor":0.002,"lowerBound":80.257,"upperBound":88.733,
+        "underlyingDescription":"Avalanche","expiryDescription":"Perpetual","moveStart":None,
+        "marginPrice":84.535,"positionLimitWeight":100.0,"group":"perpetual","change1h":-0.013858591043243936,
+        "change24h":-0.07248110071208347,"changeBod":np.nan,"volumeUsd24h":212413536.68,
+        "volume":np.nan,"openInterest":np.nan,"openInterestUsd":np.nan}}] * len(ASSETS)
+
 
     ftx_fund_rate = [z["result"]["nextFundingRate"] for z in ftx_funds]
-
+    
     drift_m_sum = drift.market_summary().T
     drift_fund_rate = (
         (drift_m_sum["last_mark_price_twap"] - drift_m_sum["last_oracle_price_twap"])
@@ -176,9 +195,9 @@ def make_funding_table():
     funding_rate_df = pd.concat(
         [pd.Series(ftx_fund_rate), pd.Series(mango_fund_rate), drift_fund_rate], axis=1
     ).T
-    funding_rate_df.index = ["FTX", "Mango", "Drift"]
+    funding_rate_df.index = ["(FTX)", "Mango", "Drift"]
     funding_rate_df.index.name = "Protocol"
-    funding_rate_df.columns = ["SOL", "BTC", "ETH", "LUNA"]
+    funding_rate_df.columns = ["SOL", "BTC", "ETH", "LUNA", "AVAX"]
     funding_rate_df = funding_rate_df * 100
     for col in funding_rate_df.columns:
         funding_rate_df[col] = funding_rate_df[col].map("{:,.5f}%".format)
@@ -244,11 +263,11 @@ def make_funding_table():
             "Bonfida",
         ],
     )
-    volumes.iloc[[0], :] *= np.array([[220, 55000, 4400]])  # todo lol
+    volumes.iloc[[0], :] *= np.array([[220, 55000, 4400, 70, 84]])  # todo lol
     for col in volumes.columns:
         volumes[col] = volumes[col].astype(float).map("${:,.0f}".format)
     volumes = volumes.reset_index()
-    volumes.columns = ["Protocol", "SOL", "BTC", "ETH"]
+    volumes.columns = ["Protocol", "SOL", "BTC", "ETH", "LUNA", "AVAX"]
     # volumes
 
     return funding_rate_df, volumes
@@ -310,7 +329,7 @@ def page_1_layout():
                             ),
                         ],
                         style={
-                            "max-width": "500px",
+                            "max-width": "700px",
                             "margin": "auto",
                             # "display": "inline",
                         },
@@ -359,7 +378,7 @@ def page_1_layout():
                     ),
                 ],
                 style={
-                    "max-width": "500px",
+                    "max-width": "700px",
                     "margin": "auto",
                 },
             ),
@@ -399,7 +418,7 @@ def page_1_layout():
                     ),
                 ],
                 style={
-                    "max-width": "500px",
+                    "max-width": "700px",
                     "margin": "auto",
                 },
             ),
