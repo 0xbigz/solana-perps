@@ -220,16 +220,34 @@ def make_drift_summary(drift) -> html.Header:
     drift_fund_rate = (
         (drift_m_sum["last_mark_price_twap"] - drift_m_sum["last_oracle_price_twap"])
     ) / 24
-    # drift_fund_rate_pct = drift_fund_rate  / drift_m_sum['last_oracle_price_twap']
+
     est_fee_pool_funding_revenue = drift_m_sum["base_asset_amount"] * drift_fund_rate
+
+    imbalance_ratio = drift_m_sum[["base_asset_amount_long", "base_asset_amount_short"]].abs().min(axis=1) \
+    / drift_m_sum[["base_asset_amount_long", "base_asset_amount_short"]].abs().max(axis=1)
+
+    drift_capped_fund_rate = imbalance_ratio * drift_fund_rate
+
+    next_est_capped_funding_revenue = \
+    drift_m_sum[["base_asset_amount_long", "base_asset_amount_short"]].abs().min(axis=1) * drift_fund_rate \
+    - drift_m_sum[["base_asset_amount_long", "base_asset_amount_short"]].abs().max(axis=1) * drift_capped_fund_rate
+
     fee_pool_df = pd.concat(
         {
             "fee_pool": fee_pool_balance,
+            "next_fund_rate": drift_fund_rate,
             "next_est_funding_revenue": est_fee_pool_funding_revenue,
+            "next_capped_fund_rate": drift_capped_fund_rate,
+            "next_est_capped_funding_revenue": next_est_capped_funding_revenue,
             "last_ts": drift_m_sum["last_mark_price_twap_ts"],
         },
         axis=1,
-    ).T.reset_index()
+    )
+    fee_pool_df.loc[fee_pool_df['fee_pool']+fee_pool_df['next_est_funding_revenue']>0,
+     ['next_capped_fund_rate', 'next_est_capped_funding_revenue']] = np.nan
+
+    
+    fee_pool_df = fee_pool_df.T.reset_index()
     fee_pool_df.columns = ["FIELD"]+list(MARKET_INDEX_TO_PERP.values())
 
     fee_pool_df = fee_pool_df.round(2)
