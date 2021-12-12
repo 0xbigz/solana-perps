@@ -6,6 +6,8 @@ import dash_html_components as html
 import pandas as pd
 import numpy as np
 import sys
+from multiprocessing import Pool
+
 
 # pd.options.display.float_format = "${:.5f}".format
 
@@ -13,6 +15,7 @@ from ui import header, footer, driftsummary, mangosummary
 
 import requests
 import datetime
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 
 
 sys.path.append("mango-explorer/")
@@ -26,10 +29,10 @@ import mango
 fees = pd.read_excel("sol-spl-fees.xlsx")
 
 
-def get_coin_gecko():
-    return requests.get(
-        "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=solana%2Cbitcoin%2Cethereum&order=market_cap_desc&per_page=100&page=1&sparkline=false"
-    ).json()
+# def get_coin_gecko():
+#     return requests.get(
+#         "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=solana%2Cbitcoin%2Cethereum&order=market_cap_desc&per_page=100&page=1&sparkline=false"
+#     ).json()
 
 
 def get_mango_prices():
@@ -95,12 +98,31 @@ def get_drift_prices(drift):
         return [[{"afterPrice": np.nan, "ts": np.nan}] * 2] * 3
 
 
+
 mango_v_drift = pd.DataFrame(
     [["loading..."] * 4] * 4,
     columns=["Protocol", "SOL", "BTC", "ETH"],
 )
 mango_v_drift["Protocol"] = pd.Series(["Drift", "Mango", "Bonfida", "(CoinGecko)"])
+ftx_funds = [{
+    "success": False,
+    "result": {
+        "volume": np.nan,
+        "nextFundingRate": np.nan,
+        "nextFundingTime": "2021-12-03T21:00:00+00:00",
+        "openInterest": np.nan,
+    },
+}]*5
 
+ftx_px = [{"success":False,
+"result":{"name":"AVAX-PERP","underlying":np.nan, "description":"Avalanche Perpetual Futures",
+"type":"perpetual","expiry":True,"perpetual":True,"expired":False,"enabled":False,
+"postOnly":False,"priceIncrement":0.001,"sizeIncrement":0.1,"last":84.491,"bid":84.498,
+"ask":84.531,"index":np.nan,"mark":np.nan,"imfFactor":0.002,"lowerBound":80.257,"upperBound":88.733,
+"underlyingDescription":"Avalanche","expiryDescription":"Perpetual","moveStart":None,
+"marginPrice":84.535,"positionLimitWeight":100.0,"group":"perpetual","change1h":-0.013858591043243936,
+"change24h":-0.07248110071208347,"changeBod":np.nan,"volumeUsd24h":212413536.68,
+"volume":np.nan,"openInterest":np.nan,"openInterestUsd":np.nan}}] * 5
 
 mango_v_drift_by_asset = html.Div("loading...")
 
@@ -121,9 +143,9 @@ app.layout = html.Div(
             id="loading-1", type="default", children=html.Div(id="loading-output-1")
         ),
         html.Div("loading...", id="tab-content"),
-        html.Br(),
-        html.Br(),
-        html.Br(),
+        # html.Br(),
+        # html.Br(),
+        # html.Br(),
     ]
 )
 
@@ -152,13 +174,15 @@ def make_funding_table():
         for mfund in [mfund_sol, mfund_btc, mfund_eth]
     ]
     try:
+        global ftx_funds
         ftx_funds = [
             requests.get("https://ftx.com/api/futures/%s-PERP/stats" % x).json()
             for x in ASSETS
         ]
 
+        global ftx_px
         ftx_px = [
-requests.get("https://ftx.com/api/futures/%s-PERP" % x).json()
+        requests.get("https://ftx.com/api/futures/%s-PERP" % x).json()
             for x in ASSETS
 
         ]
@@ -270,13 +294,18 @@ requests.get("https://ftx.com/api/futures/%s-PERP" % x).json()
     volumes.columns = ["Protocol", "SOL", "BTC", "ETH", "LUNA", "AVAX"]
     # volumes
 
-    return funding_rate_df, volumes
+    return funding_rate_df, volumes, ftx_px
 
 
 drift = driftsummary.drift_py()
 
-funding_table, volume_table = make_funding_table()
+funding_table, volume_table, ftx_px = make_funding_table()
 
+
+
+mango_prices_full = get_mango_prices()
+fida_prices_full = get_fida_prices()
+drift_prices_full = get_drift_prices(drift)
 
 def page_1_layout():
 
@@ -288,7 +317,7 @@ def page_1_layout():
             # html.H1("Protocol Compare"),
             dcc.Interval(
                 id="interval-component",
-                interval=1 * 15000,
+                interval=1 * 1000,
                 n_intervals=0,  # in milliseconds
             ),
             html.H5("Overview"),
@@ -586,17 +615,14 @@ def display_page(pathname):
 def update_metrics(n, selected_value):
     maintenant = datetime.datetime.utcnow()
 
-    global drift
-    drift = driftsummary.drift_py()
-
-    mango_prices_full = get_mango_prices()
-    fida_prices_full = get_fida_prices()
-    drift_prices_full = get_drift_prices(drift)
+    if (maintenant - maintenant_data).seconds > 15:
+        get_new_data() # fire and forget async_foo()
+    maintenant = datetime.datetime.utcnow()
 
     drift_prices_selected = None
     rr = None
     style = {"padding": "5px", "fontSize": "16px"}
-    coingeckp = get_coin_gecko()
+    # coingeckp = get_coin_gecko()
     dds = {}
     for key, val in ({0: "SOL", 1: "BTC", 2: "ETH"}).items():
         fida_prices = fida_prices_full[key]
@@ -655,25 +681,30 @@ def update_metrics(n, selected_value):
             # + drift_last_trade
             # + ")"
         )
+        ftx_price_latest = ftx_px[key]['result']['mark']
+        ftx_sol_card = "${:.2f}".format(ftx_price_latest)
 
-        coingecko_card1 = [x for x in coingeckp if x["symbol"].lower() == val.lower()][
-            0
-        ]
+        # coingecko_card1 = [x for x in coingeckp if x["symbol"].lower() == val.lower()][
+        #     0
+        # ]
 
         dds[val] = [
-            drift_sol_card,
+            ftx_sol_card,
             mango_sol_card,
+                        drift_sol_card,
+
             fida_sol_card,
-            "{:.2f}".format(coingecko_card1["current_price"]),
+            
+            # "{:.2f}".format(coingecko_card1["current_price"]),
         ]
 
         if val in selected_value:
             global mango_v_drift_by_asset
             mango_v_drift_by_asset = [
-                html.Div(
-                    "{}".format(selected_value)
-                    + " (coingecko: ${:.2f})".format(coingecko_card1["current_price"]),
-                ),
+                # html.Div(
+                #     "{}".format(selected_value)
+                #     + " (coingecko: ${:.2f})".format(coingecko_card1["current_price"]),
+                # ),
                 html.Br(),
                 html.Img(
                     src="assets/logo_drift.png",
@@ -771,15 +802,8 @@ def update_metrics(n, selected_value):
     global mango_v_drift
     mango_v_drift = pd.DataFrame(
         dds,
-        index=pd.Index(["Drift", "Mango", "Bonfida", "(CoinGecko)"], name='Protocol'),
+        index=pd.Index([ '(FTX)',  "Mango", "Drift", "Bonfida",], name='Protocol'),
     ).reset_index()
-
-    f, v = make_funding_table()
-    global funding_table
-    funding_table = f
-
-    global volume_table
-    volume_table = v
 
     global platyperps_last_update_1
     platyperps_last_update_1 = html.Span(
@@ -787,12 +811,13 @@ def update_metrics(n, selected_value):
             html.Code(
                 [
                     " last update: "
-                    + maintenant.strftime("%Y/%m/%d %H:%M:%S")
+                    + maintenant_data.strftime("%Y/%m/%d %H:%M:%S")
                     + " UTC ",
                 ],
                 style={"display": "inline"},
             ),
-            html.H6(" (updates every 15 seconds)", style={"display": "inline"}),
+            html.H6("(%i seconds ago)" % ((maintenant-maintenant_data).seconds + 1), style={'display':'inline'}),
+            # html.H6(" (updates every 15 seconds)", style={"display": "inline"}),
         ]
     )
 
@@ -805,7 +830,60 @@ def update_metrics(n, selected_value):
         volume_table.to_dict("records"),
         # pd.DataFrame(mango_prices_full).plot(),
     ]
+maintenant_data =  datetime.datetime.utcnow()
+lock = 0
 
+def get_new_data():
+    now = datetime.datetime.utcnow()
+    
+    global maintenant_data
+    global lock
+    if lock == 1 and (now - maintenant_data).seconds < 60:
+        return
+
+    lock = 1
+
+    global drift
+    drift = driftsummary.drift_py()
+
+    global mango_prices_full
+    mango_prices_full = get_mango_prices()
+
+    global fida_prices_full
+    fida_prices_full = get_fida_prices()
+
+    global drift_prices_full
+    drift_prices_full = get_drift_prices(drift)
+
+    f, v, fx = make_funding_table()
+    global funding_table
+    funding_table = f
+
+    global volume_table
+    volume_table = v
+    print(volume_table)
+
+    global ftx_px
+    ftx_px = fx
+
+    maintenant_data = now
+
+    lock = 0
+
+import time
+
+# def get_new_data_every(period=15):
+#     print("get_new_data_every")
+#     """Update the data every 'period' seconds"""
+#     while True:
+#         get_new_data()
+#         print("data updated")
+#         time.sleep(period)
+
+# def start_multi():
+#     executor = ThreadPoolExecutor(max_workers=1)
+#     executor.submit(get_new_data_every)
 
 if __name__ == "__main__":
+    # start_multi()
     app.run_server(debug=True)
