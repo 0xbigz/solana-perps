@@ -19,7 +19,10 @@ import asyncio
 
 import sys
 
-sys.path.append("drift-py/")
+sys.path.insert(0, "drift-py/")
+import time
+time.sleep(1)
+
 from drift.drift import Drift, load_config, MARKET_INDEX_TO_PERP
 
 
