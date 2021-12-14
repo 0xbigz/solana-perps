@@ -60,7 +60,7 @@ import dash_core_components as dcc
 import dash_html_components as html
 
 
-pyth_loader = stream_pyth()
+# pyth_loader = stream_pyth()
 
 
 def make_pyth_summary() -> html.Header:
@@ -68,10 +68,10 @@ def make_pyth_summary() -> html.Header:
     maintenant = datetime.datetime.utcnow()
 
     MARKET = "SOL-PERP"
-    pythprice = pyth_loader.fetch_price(MARKET.split("-")[0] + "/USDC")
-    pythstr = ": {:.2f} ± {:.2f}".format(
-        float(pythprice.mid_price), float(pythprice.confidence)
-    )
+    # pythprice = pyth_loader.fetch_price(MARKET.split("-")[0] + "/USDC")
+    # pythstr = ": {:.2f} ± {:.2f}".format(
+    #     float(pythprice.mid_price), float(pythprice.confidence)
+    # )
     perp_market = load_mango_data(MARKET)
     z = perp_market.fetch_funding(context)
 
@@ -103,7 +103,7 @@ def make_pyth_summary() -> html.Header:
                                 href="https://pyth.network/markets/?cluster=mainnet-beta#BTC/USD",
                                 target="_",
                             ),
-                            pythstr,
+                            'PYTH',
                         ]
                     ),
                     html.Br(),

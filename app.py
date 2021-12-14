@@ -46,7 +46,7 @@ def get_mango_prices():
         mango_eth_candles = requests.get(
             "https://event-history-api-candles.herokuapp.com/trades/address/DVXWg6mfwFvHQbGyaHke4h3LE9pSkgbooDSDgA4JBC8d"
         ).json()["data"]
-        return [mango_sol_candles, mango_btc_candles, mango_eth_candles]
+        return [mango_sol_candles, mango_btc_candles, mango_eth_candles] + [[{"price": np.nan, "time": 0}] * 2] * 2
     except:
         return [[{"price": np.nan, "time": np.nan}] * 2] * 3
 
@@ -62,9 +62,9 @@ def get_fida_prices():
         mango_eth_candles = requests.get(
             "https://serum-api.bonfida.com/perps/trades?market=3ds9ZtmQfHED17tXShfC1xEsZcfCvmT8huNG79wa4MHg"
         ).json()["data"]
-        return [mango_sol_candles, mango_btc_candles, mango_eth_candles]
+        return [mango_sol_candles, mango_btc_candles, mango_eth_candles]+[[{"markPrice": np.nan, "time": 0}] * 2] * 2
     except:
-        return [[{"markPrice": np.nan, "time": np.nan}] * 2] * 3
+        return [[{"markPrice": np.nan, "time": 0}] * 2] * 3
 
 
 def get_drift_prices(drift):
@@ -163,16 +163,19 @@ def make_funding_table():
         perp_market = mango.ensure_market_loaded(context, perp_stub)
         # z = perp_market.fetch_funding(context)
         return perp_market
-
-    mfund_sol, mfund_btc, mfund_eth = (
-        load_mango_data("SOL-PERP"),
-        load_mango_data("BTC-PERP"),
-        load_mango_data("ETH-PERP"),
-    )
-    mango_fund_rate = [
-        float(mfund.fetch_funding(context).rate)
-        for mfund in [mfund_sol, mfund_btc, mfund_eth]
-    ]
+    try:
+        mfund_sol, mfund_btc, mfund_eth = (
+            load_mango_data("SOL-PERP"),
+            load_mango_data("BTC-PERP"),
+            load_mango_data("ETH-PERP"),
+        )
+        mango_fund_rate = [
+            float(mfund.fetch_funding(context).rate)
+            for mfund in [mfund_sol, mfund_btc, mfund_eth]
+        ]
+    except:
+        mango_fund_rate = [np.nan]*3
+        
     try:
         global ftx_funds
         ftx_funds = [
@@ -332,8 +335,8 @@ def page_1_layout():
                                     {
                                         "name": i,
                                         "id": i,
-                                        "deletable": False,
-                                        "selectable": True,
+                                        # "deletable": False,
+                                        "selectable": False,
                                     }
                                     for i in mango_v_drift.columns
                                 ],
@@ -349,7 +352,7 @@ def page_1_layout():
                                 sort_mode="multi",
                                 # column_selectable="single",
                                 # row_selectable="multi",
-                                row_deletable=True,
+                                # row_deletable=True,
                                 selected_columns=[],
                                 selected_rows=[],
                                 page_action="native",
@@ -392,13 +395,31 @@ def page_1_layout():
                             "lineHeight": "15px",
                         },
                         data=funding_table.to_dict("records"),
+    #                      style_data_conditional=[
+    #     {
+    #         'if': {
+    #             'filter_query': '{{%s}} contains "%"'.format(col),
+    #         },
+    #         'backgroundColor': '#FFF',
+    #         'color': 'green'
+    #     } for col in funding_table.columns
+    # ],
+       style_data_conditional=[
+        {
+            'if': {
+                'filter_query': '{SOL} contains "-"',
+            },
+            'backgroundColor': '#FFF',
+            'color': 'green'
+        } 
+    ],
                         # editable=True,
                         # filter_action="native",
                         sort_action="native",
                         sort_mode="multi",
                         # column_selectable="single",
                         # row_selectable="multi",
-                        row_deletable=True,
+                        # row_deletable=True,
                         selected_columns=[],
                         selected_rows=[],
                         page_action="native",
@@ -438,7 +459,7 @@ def page_1_layout():
                         sort_mode="multi",
                         # column_selectable="single",
                         # row_selectable="multi",
-                        row_deletable=True,
+                        # row_deletable=True,
                         selected_columns=[],
                         selected_rows=[],
                         page_action="native",
@@ -624,7 +645,7 @@ def update_metrics(n, selected_value):
     style = {"padding": "5px", "fontSize": "16px"}
     # coingeckp = get_coin_gecko()
     dds = {}
-    for key, val in ({0: "SOL", 1: "BTC", 2: "ETH"}).items():
+    for key, val in ({0: "SOL", 1: "BTC", 2: "ETH", 3:'LUNA', 4:'AVAX'}).items():
         fida_prices = fida_prices_full[key]
         fida_price_latest = fida_prices[0]
         fida_price_change = fida_price_latest["markPrice"] - fida_prices[1]["markPrice"]
