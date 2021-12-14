@@ -408,7 +408,7 @@ def page_1_layout():
        style_data_conditional=[
         {
             'if': {
-                'filter_query': '{SOL} contains "-"',
+                'filter_query': '{BTC} contains "-"',
             },
             'backgroundColor': '#FFF',
             'color': 'green'
