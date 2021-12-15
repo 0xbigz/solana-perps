@@ -126,6 +126,7 @@ def make_funding_figs(history_df):
             dfplt["long_funding_rate"] - dfplt["short_funding_rate"]
         ).abs().sum() <= 1e-6:
             dfplt = dfplt.drop(["short_funding_rate", "long_funding_rate"], axis=1)
+            
         try:
             dfs_to_plt[MARKET_INDEX_TO_PERP[marketIndex]] = dfplt.resample("1H").bfill()
         except:
