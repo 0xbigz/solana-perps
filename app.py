@@ -185,6 +185,9 @@ def make_funding_table():
             float(mfund.fetch_funding(context).rate) if mfund is not None else np.nan
             for mfund in [mfund_sol, mfund_btc, mfund_eth, None, mfund_avax, mfund_bnb]
         ]
+        mango_fund_rate[-2] /= 10
+        mango_fund_rate[-1] *= 1e8
+
 
         mango_oi = [
             float(mfund.fetch_funding(context).open_interest) if mfund is not None else np.nan
