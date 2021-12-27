@@ -14,7 +14,7 @@ def make_header() -> html.Header:
                     html.Div(
                         [
                             html.Img(
-                                src="https://pbs.twimg.com/profile_banners/1388194344390119426/1637877290/1500x500",
+                                src="../assets/platyperps1.jpeg",
                                 style={
                                     "max-height": "50px",
                                     "max-width": "12%",
@@ -33,7 +33,7 @@ def make_header() -> html.Header:
                                 },
                             ),
                             html.Img(
-                                src="https://pbs.twimg.com/profile_banners/1388194344390119426/1637877290/1500x500",
+                                src="../assets/platyperps1.jpeg",
                                 style={
                                     "max-height": "50px",
                                     "max-width": "12%",
