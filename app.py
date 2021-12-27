@@ -142,6 +142,7 @@ platyperps_last_update_1 = html.Div()
 
 app = dash.Dash(__name__)
 app.title = "Platyperps | Solana Perp Platforms Side-By-Side"
+
 server = app.server
 
 app.layout = html.Div(
@@ -184,9 +185,18 @@ def make_funding_table():
             float(mfund.fetch_funding(context).rate) if mfund is not None else np.nan
             for mfund in [mfund_sol, mfund_btc, mfund_eth, None, mfund_avax, mfund_bnb]
         ]
+
+        mango_oi = [
+            float(mfund.fetch_funding(context).open_interest) if mfund is not None else np.nan
+            for mfund in [mfund_sol, mfund_btc, mfund_eth, None, mfund_avax, mfund_bnb]
+        ]
+
+        mango_oi[-2] *= 10
+        mango_oi[-1] /= 1e8
         
     except:
         mango_fund_rate = [np.nan]*6
+        mango_oi = [np.nan]*6
         
     try:
         global ftx_funds
@@ -224,13 +234,16 @@ def make_funding_table():
 
 
     ftx_fund_rate = [z["result"]["nextFundingRate"] for z in ftx_funds]
-    
+    ftx_oi = [z["result"]["openInterest"] for z in ftx_funds]
+
     drift_m_sum = drift.market_summary().T
     drift_fund_rate = (
         (drift_m_sum["last_mark_price_twap"] - drift_m_sum["last_oracle_price_twap"])
         / drift_m_sum["last_oracle_price_twap"]
     ) / 24
 
+    drift_oi = (drift_m_sum['base_asset_amount_long'] - drift_m_sum['base_asset_amount_short'])
+    print(drift_oi)
     funding_rate_df = pd.concat(
         [pd.Series(ftx_fund_rate), pd.Series(mango_fund_rate), drift_fund_rate], axis=1
     ).T
@@ -239,7 +252,7 @@ def make_funding_table():
     funding_rate_df.columns = ["SOL", "BTC", "ETH", "LUNA", "AVAX", 'BNB']
     funding_rate_df = funding_rate_df * 100
     for col in funding_rate_df.columns:
-        funding_rate_df[col] = funding_rate_df[col].map("{:,.5f}%".format)
+        funding_rate_df[col] = funding_rate_df[col].map("{:,.5f}%".format).replace('nan%','')
 
     funding_rate_df = funding_rate_df.reset_index()
 
@@ -302,6 +315,19 @@ def make_funding_table():
 
     ftx_volume = [z["result"]["volume"] for z in ftx_funds]
 
+    oi = pd.concat(
+        [pd.Series(ftx_oi), pd.Series(mango_oi), drift_oi], axis=1
+    ).T
+    oi.index = [
+            "(FTX)",
+            "Mango",
+            "Drift"
+        ]
+    for col in oi.columns:
+        oi[col] = oi[col].astype(float).map("{:,.1f}".format)
+    oi = oi.reset_index().replace('nan','')
+    oi.columns = ["Protocol", "SOL", "BTC", "ETH", "LUNA", "AVAX", "BNB"]
+
     volumes = pd.DataFrame(
         [ftx_volume, mango_volume, drift_volume, fida_volume],
         index=[
@@ -313,17 +339,17 @@ def make_funding_table():
     )
     volumes.iloc[[0], :] *= np.array([[160, 48000, 3900, 66, 84, 520]])  # todo lol
     for col in volumes.columns:
-        volumes[col] = volumes[col].astype(float).map("${:,.0f}".format)
+        volumes[col] = volumes[col].astype(float).map("${:,.0f}".format).replace('$nan','')
     volumes = volumes.reset_index()
     volumes.columns = ["Protocol", "SOL", "BTC", "ETH", "LUNA", "AVAX", "BNB"]
     # volumes
 
-    return funding_rate_df, volumes, ftx_px
+    return funding_rate_df, volumes, oi, ftx_px
 
 
 drift = driftsummary.drift_py()
 
-funding_table, volume_table, ftx_px = make_funding_table()
+funding_table, volume_table, oi_table, ftx_px = make_funding_table()
 
 
 
@@ -474,6 +500,46 @@ def page_1_layout():
                             "lineHeight": "15px",
                         },
                         data=volume_table.to_dict("records"),
+                        # editable=True,
+                        # filter_action="native",
+                        sort_action="native",
+                        sort_mode="multi",
+                        # column_selectable="single",
+                        # row_selectable="multi",
+                        # row_deletable=True,
+                        selected_columns=[],
+                        selected_rows=[],
+                        page_action="native",
+                        page_current=0,
+                        page_size=5,
+                    ),
+                ],
+                style={
+                    "max-width": "700px",
+                    "margin": "auto",
+                },
+            ),
+            html.Br(),
+            html.H6("Open Interest"),
+            html.Div(
+                [
+                    dash_table.DataTable(
+                        id="oi_table",
+                        columns=[
+                            {
+                                "name": i,
+                                "id": i,
+                                "deletable": False,
+                                "selectable": True,
+                            }
+                            for i in oi_table.columns
+                        ],
+                        style_data={
+                            "whiteSpace": "normal",
+                            "height": "auto",
+                            "lineHeight": "15px",
+                        },
+                        data=oi_table.to_dict("records"),
                         # editable=True,
                         # filter_action="native",
                         sort_action="native",
@@ -845,7 +911,7 @@ def update_metrics(n, selected_value):
     mango_v_drift = pd.DataFrame(
         dds,
         index=pd.Index([ '(FTX)',  "Mango", "Drift", "Bonfida",], name='Protocol'),
-    ).reset_index()
+    ).reset_index().replace('$nan','')
 
     global platyperps_last_update_1
     platyperps_last_update_1 = html.Span(
@@ -897,13 +963,16 @@ def get_new_data():
     global drift_prices_full
     drift_prices_full = get_drift_prices(drift)
 
-    f, v, fx = make_funding_table()
+    f, v, o, fx = make_funding_table()
     global funding_table
     funding_table = f
 
     global volume_table
     volume_table = v
-    print(volume_table)
+    # print(volume_table)
+
+    global oi_table
+    oi_table = o
 
     global ftx_px
     ftx_px = fx
