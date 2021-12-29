@@ -3,6 +3,9 @@ from dash.dependencies import Input, Output
 import dash_table
 import dash_core_components as dcc
 import dash_html_components as html
+
+import dash_bootstrap_components as dbc
+
 import pandas as pd
 import numpy as np
 
@@ -52,9 +55,6 @@ def drift_market_summary_df(drift):
     return drift_market_summary
 
 
-import dash_core_components as dcc
-import dash_html_components as html
-
 
 def make_ts(history_df):
     trdf = history_df["trade"].copy().sort_index()
@@ -71,6 +71,16 @@ def make_ts(history_df):
     for x in ["mark_price_after", "mark_price_before", "oracle_price"]:
         trdf[x] /= 1e10
 
+    toshow_m = (
+        trdf.groupby("market_index")[
+            ["fee"]
+        ]
+        .sum()
+        .sort_values("fee", ascending=False)
+    )
+    # calculate interpolated daily fee spend
+    toshow_m["hourly_avg_fee"] = (toshow_m["fee"] / duration).round(2) 
+
     # show volume of traders in 1024 most recent trades
     toshow = (
         trdf.groupby(["user_authority", "market_index"])[
@@ -82,7 +92,7 @@ def make_ts(history_df):
     # calculate interpolated daily fee spend
     toshow["hourly_avg_fee"] = (toshow["fee"] / duration).round(2)
 
-    return toshow.reset_index()
+    return toshow.reset_index(), toshow_m.T
 
 
 def make_funding_figs(history_df):
@@ -208,15 +218,21 @@ def make_drift_summary(drift) -> html.Header:
 
     history_df = drift_history_df(drift)
 
-    lead_trade_table = make_ts(history_df)
+    lead_trade_table, toshow_m = make_ts(history_df)
     xx = make_funding_figs(history_df)
     figs = xx[0]
     funding_stats = xx[1]
     last_funding_stats = xx[2].reset_index()
     deposit_fig = make_deposit_fig(history_df)
     curve_df = make_curve_history_df(history_df)
+    ff1 = (curve_df.reset_index().groupby('market_index').first().reset_index().set_index(['market_index', 'ts']))
+    prev_fee_pool_balance = ff1["total_fee_minus_distributions"] - ff1["total_fee"] / 2
+    prev_fee_pool_balance = prev_fee_pool_balance.reset_index().set_index('market_index').T
+    prev_fee_pool_balance = pd.concat([prev_fee_pool_balance, toshow_m])
+    prev_fee_pool_balance.columns = [MARKET_INDEX_TO_PERP[x] for x in prev_fee_pool_balance.columns]
 
     user_summary_df = drift.user_summary()
+    # user_summary_df['Address'] = user_summary_df['Address'].apply(lambda x: html.A(html.P(x),href="https://app.drift.com/portfolio?authority=%s" % x))
     drift_market_summary = drift_market_summary_df(drift)
 
     drift_m_sum = drift.market_summary().T
@@ -255,7 +271,10 @@ def make_drift_summary(drift) -> html.Header:
     
     fee_pool_df = fee_pool_df.T.reset_index()
     fee_pool_df.columns = ["FIELD"]+list(MARKET_INDEX_TO_PERP.values())
+    prev_fee_pool_balance['FIELD'] = ['last_ts_L1','fee_pool_L1', 'total_fee_recent', 'hourly_average_fee']
 
+    fee_pool_df = pd.concat([prev_fee_pool_balance, fee_pool_df])
+    fee_pool_df = fee_pool_df[["FIELD"]+list(MARKET_INDEX_TO_PERP.values())]
     fee_pool_df = fee_pool_df.round(2)
 
     est_next_funding = (

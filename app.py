@@ -9,7 +9,6 @@ import sys
 from multiprocessing import Pool
 
 
-
 # pd.options.display.float_format = "${:.5f}".format
 
 from ui import header, footer, driftsummary, mangosummary
@@ -140,7 +139,8 @@ mango_v_drift_by_asset = html.Div("loading...")
 
 platyperps_last_update_1 = html.Div()
 
-app = dash.Dash(__name__)
+# import dash_bootstrap_components as dbc
+app = dash.Dash(__name__)#, external_stylesheets=[dbc.themes.ZEPHYR])
 app.title = "Platyperps | Solana Perp Platforms Side-By-Side"
 
 server = app.server
