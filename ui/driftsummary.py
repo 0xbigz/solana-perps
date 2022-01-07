@@ -48,7 +48,7 @@ def drift_market_summary_df(drift):
     drift_market_summary = (
         drift_market_summary.drop(["oracle", "market_name", "initialized"], axis=0)
         .reset_index()
-        .round(4)
+        #.round(4)
     )
     drift_market_summary.columns = ["FIELD"]+list(MARKET_INDEX_TO_PERP.values())
     return drift_market_summary
@@ -64,7 +64,7 @@ def make_ts(history_df):
 
     for x in ["fee", "quote_asset_amount"]:
         trdf[x] /= 1e6
-        trdf[x] = trdf[x].round(2)
+        trdf[x] = trdf[x].fillna(0)#.round(2)
     for x in ["base_asset_amount"]:
         trdf[x] /= 1e13
     for x in ["mark_price_after", "mark_price_before", "oracle_price"]:
@@ -78,7 +78,7 @@ def make_ts(history_df):
         .sort_values("fee", ascending=False)
     )
     # calculate interpolated daily fee spend
-    toshow_m["hourly_avg_fee"] = (toshow_m["fee"] / duration).round(2) 
+    toshow_m["hourly_avg_fee"] = (toshow_m["fee"] / duration)#.round(2) 
 
     # show volume of traders in 1024 most recent trades
     toshow = (
@@ -89,7 +89,7 @@ def make_ts(history_df):
         .sort_values("fee", ascending=False)
     )
     # calculate interpolated daily fee spend
-    toshow["hourly_avg_fee"] = (toshow["fee"] / duration).round(2)
+    toshow["hourly_avg_fee"] = (toshow["fee"] / duration)#.round(2)
 
     return toshow.reset_index(), toshow_m.T
 
@@ -145,7 +145,7 @@ def make_funding_figs(history_df):
     thefig.columns = [str(x) for x in thefig.columns]
     figs = [thefig.plot()]
     funding_stats = thefig.tail(24).agg(["mean", "std", "sum"])
-    funding_stats = funding_stats.round(5).reset_index()
+    funding_stats = funding_stats.reset_index()#.round(5).reset_index()
     last_funding_stats = thefig.tail(1)
     return (figs, funding_stats, last_funding_stats)
 
@@ -177,15 +177,15 @@ def make_curve_history_df(history_df):
 
     for col in cost_col:
         dd[col] /= 1e6
-        dd[col] = dd[col].round(2)
+        dd[col] = dd[col]#.round(2)
 
     for col in k_col:
         dd[col] /= 1e13
-        dd[col] = dd[col].round(5)
+        dd[col] = dd[col]#.round(5)
 
     for col in peg_col:
         dd[col] /= 1e3
-        dd[col] = dd[col].round(3)
+        dd[col] = dd[col]#.round(3)
 
     return dd
 
@@ -230,7 +230,7 @@ def make_drift_summary(drift) -> html.Header:
     prev_fee_pool_balance = pd.concat([prev_fee_pool_balance, toshow_m])
     prev_fee_pool_balance.columns = [MARKET_INDEX_TO_PERP[x] for x in prev_fee_pool_balance.columns]
 
-    user_summary_df = drift.user_summary()
+    user_summary_df = drift.user_summary().sort_values('realized_pnl', ascending=False)
     # user_summary_df['Address'] = user_summary_df['Address'].apply(lambda x: html.A(html.P(x),href="https://app.drift.com/portfolio?authority=%s" % x))
     drift_market_summary = drift_market_summary_df(drift)
 
@@ -274,7 +274,7 @@ def make_drift_summary(drift) -> html.Header:
 
     fee_pool_df = pd.concat([prev_fee_pool_balance, fee_pool_df])
     fee_pool_df = fee_pool_df[["FIELD"]+list(MARKET_INDEX_TO_PERP.values())]
-    fee_pool_df = fee_pool_df.round(2)
+    fee_pool_df = fee_pool_df#.round(2)
 
     est_next_funding = (
         (
