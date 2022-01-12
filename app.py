@@ -263,7 +263,7 @@ def make_funding_table():
     drift_oi = (drift_m_sum['base_asset_amount_long'] - drift_m_sum['base_asset_amount_short'])
     funding_rate_df = pd.concat(
         [pd.Series(ftx_fund_rate), pd.Series(mango_fund_rate), drift_fund_rate], axis=1
-    ).T
+    ).T * FUNDING_SCALE
     funding_rate_df.index = ["(FTX)", "Mango", "Drift"]
     funding_rate_df.index.name = "Protocol"
     funding_rate_df.columns = ASSETS
@@ -349,6 +349,7 @@ def make_funding_table():
 
 drift = driftsummary.drift_py()
 
+FUNDING_SCALE = 1
 funding_table, volume_table, oi_table, ftx_px = make_funding_table()
 
 
@@ -422,7 +423,26 @@ def page_1_layout():
                 ]
             ),
             html.Br(),
-            html.H6("1h Funding Rates"),
+            html.Span([
+            html.H6("1h Funding Rates", id="funding-rate-update-text"),
+            html.Div(
+                [
+                    dcc.Dropdown(
+                        id="dropdown2",
+                        options=[
+                            {"label": '1h', "value": 1},
+                            {"label": '24h', "value": 24},
+                            {"label": '7d', "value": 24*7},
+                            {"label": 'APR', "value": 24*365},
+                        ],
+                        value=1,
+                    ),
+                ],
+                style={"max-width": "100px", "margin": "auto", "text-align": "left"},
+            ),
+            ],
+            style={'display':'inline'},
+            ),
             html.Div(
                 [
                     dash_table.DataTable(
@@ -709,6 +729,22 @@ def display_page(pathname):
             {"background-color": "white", "color": "black"},
         )
 
+
+@app.callback(
+    [dash.dependencies.Output("funding-rate-update-text", 'children')],
+    [
+        dash.dependencies.Input("dropdown2", "value")
+    ],
+)
+def update_funding_scale(funding_scale):
+    global FUNDING_SCALE
+    FUNDING_SCALE = funding_scale
+    funding_nom = {1: '1h',
+                    24: '24h',
+                    24*7: '7d',
+                    24*365:'APR'}[funding_scale]
+
+    return [(str(funding_nom)+' Funding Rate')]
 
 @app.callback(
     [
