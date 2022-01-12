@@ -113,7 +113,7 @@ mango_v_drift = pd.DataFrame(
     [["loading..."] * 4] * 4,
     columns=["Protocol", "SOL", "BTC", "ETH"],
 )
-mango_v_drift["Protocol"] = pd.Series(["Drift", "Mango", "Bonfida", "(CoinGecko)"])
+mango_v_drift["Protocol"] = pd.Series(["(FTX", "Mango", "Drift", "Bonfida"])
 ftx_funds = [{
     "success": False,
     "result": {
@@ -165,8 +165,14 @@ context = mangosummary.mango_py()
 
 
 def make_funding_table():
-
-    ASSETS = ("SOL", "BTC", "ETH", "LUNA", "AVAX", "BNB", "MATIC")
+    # drift_markets = {v: str(k) for k,v in driftsummary.MARKET_INDEX_TO_PERP.items()}
+    ASSETS=[]
+    for x in range(len(list(driftsummary.MARKET_INDEX_TO_PERP.values()))):
+        ASSETS.append(driftsummary.MARKET_INDEX_TO_PERP[x].split('-')[0])
+        #("SOL", "BTC", "ETH", "LUNA", "AVAX", "BNB", "MATIC")
+    print(ASSETS)
+    assert(ASSETS[0]=='SOL')
+    
     # import requests
     def load_mango_data(market="SOL-PERP"):
         # Find the addresses associated with the Perp market
@@ -294,7 +300,8 @@ def make_funding_table():
     except:
         drift_volume = [np.nan] * 5
 
-    ftx_volume = [z["result"]["volume"] for z in ftx_funds]
+    # ftx_volume = [z["result"]["volume"] for z in ftx_funds]
+    ftx_volume = [z["result"]["volumeUsd24h"] for z in ftx_px]
 
     oi = pd.concat(
         [pd.Series(ftx_oi), pd.Series(mango_oi), drift_oi], axis=1
@@ -318,7 +325,7 @@ def make_funding_table():
             "Bonfida",
         ],
     )
-    volumes.iloc[[0], :] *= np.array([[140, 42000, 3600, 66, 84, 520, 2.13]])  # todo lol
+    # volumes.iloc[[0], :] *= np.array([[140, 42000, 3600, 66, 84, 520, 2.13]])  # todo lol
     for col in volumes.columns:
         volumes[col] = volumes[col].astype(float).map("${:,.0f}".format).replace('$nan','')
     volumes = volumes.reset_index()
@@ -623,6 +630,11 @@ page_2_layout = html.Div(
         html.A(
             " Collateral Vault",
             href="https://solscan.io/account/6W9yiHDCW9EpropkFV8R3rPiL8LVWUHSiys3YeW6AT6S#splTransfer",
+        ),
+        " | ",
+        html.A(
+            " drift-flat-data (csv)",
+            href="https://flatgithub.com/0xbigz/drift-flat-data?filename=data%2Fliquidation_history.csv&sort=record_id%2Cdesc&stickyColumnName=ts",
         ),
         html.Br(),
         dcc.Loading(
