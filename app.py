@@ -55,10 +55,15 @@ def get_mango_prices():
         mango_bnb_candles = requests.get(
             'https://event-history-api-candles.herokuapp.com/trades/address/CqxX2QupYiYafBSbA519j4vRVxxecidbh2zwX66Lmqem'
         ).json()["data"]
+        mango_srm_candles = requests.get(
+            'https://event-history-api-candles.herokuapp.com/trades/address/4GkJj2znAr2pE2PBbak66E12zjCs2jkmeafiJwDVM9Au'
+        ).json()["data"]
         return [mango_sol_candles, mango_btc_candles, mango_eth_candles] \
-        + [mango_luna_candles, mango_avax_candles, mango_bnb_candles]
+        + [mango_luna_candles, mango_avax_candles, mango_bnb_candles]\
+        + ([[{"price": np.nan, "time": np.nan}] * 2] * 2)\
+        + [mango_srm_candles]
     except:
-        return [[{"price": np.nan, "time": np.nan}] * 2] * 6
+        return [[{"price": np.nan, "time": np.nan}] * 2] * 11
 
 
 def get_fida_prices():
@@ -72,9 +77,9 @@ def get_fida_prices():
         mango_eth_candles = requests.get(
             "https://serum-api.bonfida.com/perps/trades?market=3ds9ZtmQfHED17tXShfC1xEsZcfCvmT8huNG79wa4MHg"
         ).json()["data"]
-        return [mango_sol_candles, mango_btc_candles, mango_eth_candles]+[[{"markPrice": np.nan, "time": 0}] * 2] * 3
+        return [mango_sol_candles, mango_btc_candles, mango_eth_candles]+[[{"markPrice": np.nan, "time": 0}] * 2] * 11
     except:
-        return [[{"markPrice": np.nan, "time": 0}] * 2] * 6
+        return [[{"markPrice": np.nan, "time": 0}] * 2] * 11
 
 
 def get_drift_prices(drift):
@@ -105,7 +110,7 @@ def get_drift_prices(drift):
         return res
     except Exception as e:
         print(e)
-        return [[{"afterPrice": np.nan, "ts": np.nan}] * 2] * 3
+        return [[{"afterPrice": np.nan, "ts": np.nan}] * 2] * 11
 
 
 
@@ -172,6 +177,10 @@ def make_funding_table():
         #("SOL", "BTC", "ETH", "LUNA", "AVAX", "BNB", "MATIC")
     print(ASSETS)
     assert(ASSETS[0]=='SOL')
+
+    EXTRAS = ['SRM']
+    for extra in EXTRAS:
+        ASSETS.append(extra)
     
     # import requests
     def load_mango_data(market="SOL-PERP"):
@@ -190,9 +199,13 @@ def make_funding_table():
         "LUNA": "BCJrpvsB2BJtqiDgKVC4N6gyX1y24Jz96C6wMraYmXss",
         "AVAX": "EAC7jtzsoQwCbXj1M3DapWrNLnc3MBwXAarvWDPr2ZV9",
         "BNB": "CqxX2QupYiYafBSbA519j4vRVxxecidbh2zwX66Lmqem",
+        'SRM': "4GkJj2znAr2pE2PBbak66E12zjCs2jkmeafiJwDVM9Au",
+        'RAY': "DtEcjPLyD4YtTBB4q8xwFZ9q49W89xZCZtJyrGebi5t8",
+        'MNGO': "DtEcjPLyD4YtTBB4q8xwFZ9q49W89xZCZtJyrGebi5t8",
+        'ADA': "Bh9UENAncoTEwE7NDim8CdeM1GPvw6xAT4Sih2rKVmWB",
     }
-    mango_fund_rate = [np.nan]*7
-    mango_oi = [np.nan]*7
+    mango_fund_rate = [np.nan]*len(ASSETS)
+    mango_oi = [np.nan]*len(ASSETS)
     try:
         for i,x in enumerate((ASSETS)):
             if x in mango_markets.keys():
@@ -277,28 +290,27 @@ def make_funding_table():
             for x in ("SOL", "BTC", "ETH")
         ]
     except:
-        fida_volume = [np.nan] * 3
+        fida_volume = [np.nan] * len(ASSETS)
 
-    mango_volume = [np.nan]*7
-    try:
-        for i,x in enumerate(("SOL", "BTC", "ETH", "LUNA", "AVAX", "BNB")):
+    mango_volume = [np.nan]*len(ASSETS)
+    for i,x in enumerate(ASSETS):
+        try:
             mango_volume[i] = requests.get(
                 "https://event-history-api.herokuapp.com/stats/perps/%s"
                 % mango_markets[x]
             ).json()["data"]["volume"] 
-    except:
-        pass
-
-    try:
-        drift_volume = [
-            requests.get(
-                "https://mainnet-beta.history.drift.trade/stats/24HourVolume?marketIndex=%s"
-                % drift_markets[x+'-PERP']
-            ).json()["data"]["volume"]
-            for x in ASSETS
-        ]
-    except:
-        drift_volume = [np.nan] * 5
+        except:
+            pass
+            
+    drift_volume = [np.nan]*len(ASSETS)
+    for i,x in enumerate(ASSETS):
+        try:
+            drift_volume[i] = requests.get(
+            "https://mainnet-beta.history.drift.trade/stats/24HourVolume?marketIndex=%s"
+            % drift_markets[x+'-PERP']
+        ).json()["data"]["volume"]
+        except:
+            pass
 
     # ftx_volume = [z["result"]["volume"] for z in ftx_funds]
     ftx_volume = [z["result"]["volumeUsd24h"] for z in ftx_px]
@@ -396,7 +408,7 @@ def page_1_layout():
                             ),
                         ],
                         style={
-                            "max-width": "700px",
+                            "max-width": "900px",
                             "margin": "auto",
                             # "display": "inline",
                         },
@@ -463,7 +475,7 @@ def page_1_layout():
                     ),
                 ],
                 style={
-                    "max-width": "700px",
+                    "max-width": "900px",
                     "margin": "auto",
                 },
             ),
@@ -503,7 +515,7 @@ def page_1_layout():
                     ),
                 ],
                 style={
-                    "max-width": "700px",
+                    "max-width": "900px",
                     "margin": "auto",
                 },
             ),
@@ -517,7 +529,7 @@ def page_1_layout():
                             {
                                 "name": i,
                                 "id": i,
-                                "deletable": False,
+                                "deletable": True,
                                 "selectable": True,
                             }
                             for i in oi_table.columns
@@ -543,7 +555,7 @@ def page_1_layout():
                     ),
                 ],
                 style={
-                    "max-width": "700px",
+                    "max-width": "900px",
                     "margin": "auto",
                 },
             ),
@@ -555,7 +567,7 @@ def page_1_layout():
                         id="dropdown",
                         options=[
                             {"label": i, "value": i}
-                            for i in ["SOL-PERP", "BTC-PERP", "ETH-PERP"]
+                            for i in list(driftsummary.MARKET_INDEX_TO_PERP.values())
                         ],
                         value="SOL-PERP",
                     ),
@@ -725,7 +737,10 @@ def update_metrics(n, selected_value):
     style = {"padding": "5px", "fontSize": "16px"}
     # coingeckp = get_coin_gecko()
     dds = {}
-    for key, val in ({0: "SOL", 1: "BTC", 2: "ETH", 3:'LUNA', 4:'AVAX', 5: "BNB"}).items():
+    ASSETS2 = list((driftsummary.MARKET_INDEX_TO_PERP).items())
+    ASSETS2.append((len(ASSETS2), 'SRM')) #extras todo
+    for key, valperp in ASSETS2:
+        val = valperp.split('-')[0]
         fida_prices = fida_prices_full[key]
         fida_price_latest = fida_prices[0]
         fida_price_change = fida_price_latest["markPrice"] - fida_prices[1]["markPrice"]
@@ -751,7 +766,10 @@ def update_metrics(n, selected_value):
             + " seconds ago"
         )
 
-        drift_prices = drift_prices_full[key]
+        if len(drift_prices_full) > key:
+            drift_prices = drift_prices_full[key]
+        else:
+            drift_prices = {'afterPrice':np.nan, 'ts':np.nan}
 
         drift_price_latest = drift_prices["afterPrice"]
         drift_price_change = (
@@ -761,14 +779,12 @@ def update_metrics(n, selected_value):
             str((maintenant - pd.to_datetime(drift_prices["ts"])).seconds).split(".")[0]
             + " seconds ago"
         )
-
         drift_sol_card = (
             "${:.2f}".format(drift_price_latest)
             # + "\n (last trade: "
             # + drift_last_trade
             # + ")"
         )
-
         mango_sol_card = (
             "${:.2f}".format(mango_price_latest["price"])
             # + "\n (last trade: "

@@ -53,7 +53,8 @@ def make_header() -> html.Header:
                         },
                     )
                 ],
-                href="https://twitter.com/bigz_Pubkey",
+                href="https://twitter.com/platyperps",
+                target="_blank",
             ),
             # create navigator with buttons
             html.Nav(
