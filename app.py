@@ -60,7 +60,7 @@ def get_mango_prices():
         ).json()["data"]
         return [mango_sol_candles, mango_btc_candles, mango_eth_candles] \
         + [mango_luna_candles, mango_avax_candles, mango_bnb_candles]\
-        + ([[{"price": np.nan, "time": np.nan}] * 2] * 2)\
+        + ([[{"price": np.nan, "time": np.nan}] * 2] * 3)\
         + [mango_srm_candles]
     except:
         return [[{"price": np.nan, "time": np.nan}] * 2] * 11
@@ -261,6 +261,7 @@ def make_funding_table():
     ) / 24
 
     drift_oi = (drift_m_sum['base_asset_amount_long'] - drift_m_sum['base_asset_amount_short'])
+    print('FUNDING_SCALE', FUNDING_SCALE)
     funding_rate_df = pd.concat(
         [pd.Series(ftx_fund_rate), pd.Series(mango_fund_rate), drift_fund_rate], axis=1
     ).T * FUNDING_SCALE
