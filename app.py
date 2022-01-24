@@ -355,8 +355,8 @@ funding_table, volume_table, oi_table, ftx_px = make_funding_table()
 
 
 
-mango_prices_full = get_mango_prices()
-fida_prices_full = get_fida_prices()
+mango_prices_full =  [[{"price": np.nan, "time": np.nan}] * 11]#get_mango_prices()
+fida_prices_full =  [[{"markPrice": np.nan, "time": 0}] * 11]#get_fida_prices()
 drift_prices_full = get_drift_prices(drift)
 
 def page_1_layout():
@@ -765,7 +765,7 @@ def update_funding_scale(funding_scale):
 def update_metrics(n, selected_value):
     maintenant = datetime.datetime.utcnow()
 
-    if (maintenant - maintenant_data).seconds > 15:
+    if (maintenant - maintenant_data).seconds > 60*5:
         get_new_data() # fire and forget async_foo()
     maintenant = datetime.datetime.utcnow()
 
@@ -992,7 +992,7 @@ def get_new_data():
     
     global maintenant_data
     global lock
-    if lock == 1 and (now - maintenant_data).seconds < 60:
+    if lock == 1 and (now - maintenant_data).seconds < 60*5:
         return
 
     lock = 1
