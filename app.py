@@ -307,7 +307,7 @@ def make_funding_table():
     for i,x in enumerate(ASSETS):
         try:
             drift_volume[i] = requests.get(
-            "https://mainnet-beta.history.drift.trade/stats/24HourVolume?marketIndex=%s"
+            "https://mainnet-beta.api.drift.trade/stats/24HourVolume?marketIndex=%s"
             % drift_markets[x+'-PERP']
         ).json()["data"]["volume"]
         except:
