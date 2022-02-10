@@ -58,9 +58,18 @@ def get_mango_prices():
         mango_srm_candles = requests.get(
             'https://event-history-api-candles.herokuapp.com/trades/address/4GkJj2znAr2pE2PBbak66E12zjCs2jkmeafiJwDVM9Au'
         ).json()["data"]
+        mango_ada_candles = requests.get(
+            'https://event-history-api-candles.herokuapp.com/trades/address/Bh9UENAncoTEwE7NDim8CdeM1GPvw6xAT4Sih2rKVmWB'
+        ).json()["data"]
+        mango_ftt_candles = requests.get(
+            'https://event-history-api-candles.herokuapp.com/trades/address/AhgEayEGNw46ALHuC5ASsKyfsJzAm5JY8DWqpGMQhcGC'
+        ).json()["data"]
         return [mango_sol_candles, mango_btc_candles, mango_eth_candles] \
         + [mango_luna_candles, mango_avax_candles, mango_bnb_candles]\
         + ([[{"price": np.nan, "time": np.nan}] * 2] * 3)\
+        + [mango_ada_candles]\
+        + ([[{"price": np.nan, "time": np.nan}] * 2] * 1)\
+        + [mango_ftt_candles]\
         + [mango_srm_candles]
     except:
         return [[{"price": np.nan, "time": np.nan}] * 2] * 11
@@ -77,9 +86,9 @@ def get_fida_prices():
         mango_eth_candles = requests.get(
             "https://serum-api.bonfida.com/perps/trades?market=3ds9ZtmQfHED17tXShfC1xEsZcfCvmT8huNG79wa4MHg"
         ).json()["data"]
-        return [mango_sol_candles, mango_btc_candles, mango_eth_candles]+[[{"markPrice": np.nan, "time": 0}] * 2] * 11
+        return [mango_sol_candles, mango_btc_candles, mango_eth_candles]+[[{"markPrice": np.nan, "time": 0}] * 2] * 17
     except:
-        return [[{"markPrice": np.nan, "time": 0}] * 2] * 11
+        return [[{"markPrice": np.nan, "time": 0}] * 2] * 15
 
 
 def get_drift_prices(drift):
@@ -118,7 +127,7 @@ mango_v_drift = pd.DataFrame(
     [["loading..."] * 4] * 4,
     columns=["Protocol", "SOL", "BTC", "ETH"],
 )
-mango_v_drift["Protocol"] = pd.Series(["(FTX", "Mango", "Drift", "Bonfida"])
+mango_v_drift["Protocol"] = pd.Series(["(FTX)", "Mango", "Drift", "Bonfida"])
 ftx_funds = [{
     "success": False,
     "result": {
@@ -203,6 +212,7 @@ def make_funding_table():
         'RAY': "DtEcjPLyD4YtTBB4q8xwFZ9q49W89xZCZtJyrGebi5t8",
         'MNGO': "DtEcjPLyD4YtTBB4q8xwFZ9q49W89xZCZtJyrGebi5t8",
         'ADA': "Bh9UENAncoTEwE7NDim8CdeM1GPvw6xAT4Sih2rKVmWB",
+        'FTT': "AhgEayEGNw46ALHuC5ASsKyfsJzAm5JY8DWqpGMQhcGC",
     }
     mango_fund_rate = [np.nan]*len(ASSETS)
     mango_oi = [np.nan]*len(ASSETS)
@@ -355,8 +365,8 @@ funding_table, volume_table, oi_table, ftx_px = make_funding_table()
 
 
 
-mango_prices_full =  [[{"price": np.nan, "time": np.nan}] * 11]#get_mango_prices()
-fida_prices_full =  [[{"markPrice": np.nan, "time": 0}] * 11]#get_fida_prices()
+mango_prices_full =  [[{"price": np.nan, "time": np.nan}] * 15]*15#get_mango_prices()
+fida_prices_full =  [[{"markPrice": np.nan, "time": 0}] * 15]*15#get_fida_prices()
 drift_prices_full = get_drift_prices(drift)
 
 def page_1_layout():
@@ -765,7 +775,7 @@ def update_funding_scale(funding_scale):
 def update_metrics(n, selected_value):
     maintenant = datetime.datetime.utcnow()
 
-    if (maintenant - maintenant_data).seconds > 60*5:
+    if (maintenant - maintenant_data).seconds > 60:
         get_new_data() # fire and forget async_foo()
     maintenant = datetime.datetime.utcnow()
 
@@ -778,6 +788,7 @@ def update_metrics(n, selected_value):
     ASSETS2.append((len(ASSETS2), 'SRM')) #extras todo
     for key, valperp in ASSETS2:
         val = valperp.split('-')[0]
+        # print(fida_prices_full, key)
         fida_prices = fida_prices_full[key]
         fida_price_latest = fida_prices[0]
         fida_price_change = fida_price_latest["markPrice"] - fida_prices[1]["markPrice"]
