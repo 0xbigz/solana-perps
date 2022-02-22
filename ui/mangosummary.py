@@ -73,7 +73,7 @@ def make_pyth_summary() -> html.Header:
     #     float(pythprice.mid_price), float(pythprice.confidence)
     # )
     perp_market = load_mango_data(MARKET)
-    z = perp_market.fetch_funding(context)
+    # z = perp_market.fetch_funding(context)
 
     return html.Header(
         children=
@@ -111,7 +111,7 @@ def make_pyth_summary() -> html.Header:
                     html.H6(
                         "note: averaging long and short funding and excluding socialized loss"
                     ),
-                    html.Code(z.rate),
+                    html.Code(0),
                 ]
             ),
         ]
