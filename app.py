@@ -291,7 +291,7 @@ def make_funding_table():
     print('FUNDING_SCALE', FUNDING_SCALE)
     funding_rate_df = pd.concat(
         [pd.Series(ftx_fund_rate), pd.Series(dydx_fund_rate), pd.Series(mango_fund_rate), drift_fund_rate], axis=1
-    ).T * FUNDING_SCALE
+    ).T #* FUNDING_SCALE
     funding_rate_df.index = ["(FTX)", "DYDX", "Mango", "Drift"]
     funding_rate_df.index.name = "Protocol"
     funding_rate_df.columns = ASSETS
@@ -461,9 +461,9 @@ def page_1_layout():
                         id="dropdown2",
                         options=[
                             {"label": '1h', "value": 1},
-                            {"label": '24h', "value": 24},
-                            {"label": '7d', "value": 24*7},
-                            {"label": 'APR', "value": 24*365},
+                            # {"label": '24h', "value": 24},
+                            # {"label": '7d', "value": 24*7},
+                            # {"label": 'APR', "value": 24*365},
                         ],
                         value=1,
                     ),
@@ -990,7 +990,7 @@ def update_metrics(n, selected_value):
     ).reset_index().replace('$nan','')
 
     global platyperps_last_update_1
-    platyperps_last_update_1 = html.Span(
+    platyperps_last_update_1 = html.Div([html.Span(
         [
             html.Code(
                 [
@@ -1003,7 +1003,17 @@ def update_metrics(n, selected_value):
             html.H6("(%i seconds ago)" % ((maintenant-maintenant_data).seconds + 1), style={'display':'inline'}),
             # html.H6(" (updates every 15 seconds)", style={"display": "inline"}),
         ]
-    )
+    ),
+    html.Br(),
+    html.Span([
+                    html.H6("help support the site with any donations to SOL address:&nbsp;", style={'display':'inline'}),
+
+     html.Code("pLaTMYUZVTzAmpc73NWkhHVJ3YKAq8FEHvHmuqKjdPh",
+                     style={"display": "inline"},
+),
+
+    ]
+    )]),
 
     return [
         platyperps_last_update_1,
