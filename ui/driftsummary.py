@@ -154,7 +154,7 @@ def make_deposit_fig(history_df):
     deposits = history_df["deposit"].loc["2021":]
     deposit_ts = (
         deposits.apply(
-            lambda x: (x["amount"] if 'deposit' in str(x["direction"]).lower()  else (x["amount"])), axis=1
+            lambda x: (x["amount"] if 'deposit' in str(x["direction"]).lower()  else (-x["amount"])), axis=1
         )
         / 1e6
     )

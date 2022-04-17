@@ -189,7 +189,7 @@ def make_funding_table():
     print(ASSETS)
     assert(ASSETS[0]=='SOL')
 
-    EXTRAS = ['SRM']
+    EXTRAS = ['RAY']
     for extra in EXTRAS:
         ASSETS.append(extra)
     
@@ -439,7 +439,7 @@ def page_1_layout():
                             ),
                         ],
                         style={
-                            "max-width": "900px",
+                            "max-width": "1400px",
                             "margin": "auto",
                             # "display": "inline",
                         },
@@ -525,7 +525,7 @@ def page_1_layout():
                     ),
                 ],
                 style={
-                    "max-width": "900px",
+                    "max-width": "1400px",
                     "margin": "auto",
                 },
             ),
@@ -565,7 +565,7 @@ def page_1_layout():
                     ),
                 ],
                 style={
-                    "max-width": "900px",
+                    "max-width": "1400px",
                     "margin": "auto",
                 },
             ),
@@ -605,7 +605,7 @@ def page_1_layout():
                     ),
                 ],
                 style={
-                    "max-width": "900px",
+                    "max-width": "1400px",
                     "margin": "auto",
                 },
             ),
@@ -1006,7 +1006,7 @@ def update_metrics(n, selected_value):
     ),
     html.Br(),
     html.Span([
-                    html.H6("help support the site with any donations to SOL address:&nbsp;", style={'display':'inline'}),
+                    html.H6("help support the site with any donations to SOL address: ", style={'display':'inline'}),
 
      html.Code("pLaTMYUZVTzAmpc73NWkhHVJ3YKAq8FEHvHmuqKjdPh",
                      style={"display": "inline"},
