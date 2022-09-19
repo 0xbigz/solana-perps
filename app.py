@@ -272,8 +272,8 @@ def make_funding_table():
 
     dydx_assets = list(dydx_data['markets'].keys())
 
-    ftx_fund_rate = [z["result"]["nextFundingRate"] for z in ftx_funds]
-    ftx_oi = [z["result"]["openInterest"] for z in ftx_funds]
+    ftx_fund_rate = [z["result"]["nextFundingRate"] if z.get('result', False) else 0 for z in ftx_funds]
+    ftx_oi = [z["result"]["openInterest"] if z.get('result', False) else 0  for z in ftx_funds]
 
     dydx_data_assets = [dydx_data['markets'][ast+'-USD'] if ast+'-USD' in dydx_data['markets'] else {} for ast in ASSETS ]
 
@@ -341,7 +341,7 @@ def make_funding_table():
             pass
 
     # ftx_volume = [z["result"]["volume"] for z in ftx_funds]
-    ftx_volume = [z["result"]["volumeUsd24h"] for z in ftx_px]
+    ftx_volume = [z["result"]["volumeUsd24h"] if z.get('result', False) else 0 for z in ftx_px]
 
     oi = pd.concat(
         [pd.Series(ftx_oi), pd.Series(dydx_oi), pd.Series(mango_oi), drift_oi], axis=1
